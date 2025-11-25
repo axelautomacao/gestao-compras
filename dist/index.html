@@ -1,0 +1,931 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Compras de Obras (Axel v10)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel='icon' type='image/png' href='./images/favicon.png'>
+
+    <style>
+        :root {
+            --axel-green: #2E9A45;
+            --axel-green-hover: #257a38;
+            --axel-red: #EF4444;
+            --axel-red-hover: #c82a2a;
+            --axel-gray-text: #374151;
+            --axel-gray-light: #F9FAFB;
+            --axel-gray-border: #E5E7EB;
+
+            /* Cores de Fundo */
+            --bg-primary: #ffffff;
+            --bg-secondary: #F9FAFB;
+            --bg-tertiary: #F3F4F6;
+            --bg-sidebar: #1F2937; /* Cor escura original da sidebar */
+            --bg-sidebar-hover: #374151;
+            --bg-modal: #ffffff;
+            --bg-input: #ffffff;
+            
+            /* Cores de Texto */
+            --text-primary: #374151;
+            --text-secondary: #6B7280;
+            --text-on-sidebar: #D1D5DB;
+            --text-on-sidebar-active: #FFFFFF;
+            
+            /* Cores de Borda */
+            --border-color: #E5E7EB;
+        }
+        
+        /* Definições do Tema Escuro (Item 3) */
+        :root.dark {
+            --bg-primary: #1F2937;
+            --bg-secondary: #111827;
+            --bg-tertiary: #374151;
+            
+            --bg-modal: #374151;
+            --bg-input: #4B5563;
+
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
+
+            --border-color: #4B5563;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-primary);
+            background-color: var(--bg-tertiary); /* Aplicando tema */
+            transition: background-color 0.2s, color 0.2s;
+        }
+        
+        /* Aplica tema aos cards, modais, inputs, etc. */
+        .card { 
+            background-color: var(--bg-primary); 
+            border-color: var(--border-color);
+            border-width: 1px;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        dialog { background-color: var(--bg-modal); }
+        .input, .input-group select { 
+            background-color: var(--bg-input); 
+            color: var(--text-primary);
+            border-color: var(--border-color);
+        }
+        .input::placeholder { color: var(--text-secondary); }
+        .input-group { border-color: var(--border-color); }
+        #pdfContainer { background-color: var(--bg-secondary); }
+        .orcamento-resumo-grid { background-color: var(--bg-secondary); border-color: var(--border-color); }
+        .cadastro-list-item { border-color: var(--border-color); }
+        table thead { background-color: var(--bg-secondary); }
+        table tbody { border-color: var(--border-color); }
+        :root.dark table thead { background-color: #374151; }
+        
+        /* Botões */
+        .btn { padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; background-color: var(--axel-green); font-weight: 500; transition: background-color 0.2s; cursor: pointer; }
+        .btn:hover { background-color: var(--axel-green-hover); }
+        .btn-secondary { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 500; background-color: #e5e7eb; color: #374151; transition: background-color 0.2s; cursor: pointer; }
+        .btn-secondary:hover { background-color: #d1d5db; }
+        :root.dark .btn-secondary { background-color: #4B5563; color: #F9FAFB; }
+        :root.dark .btn-secondary:hover { background-color: #5a6678; }
+
+        .btn-danger { padding: 0.5rem 1rem; border-radius: 0.5rem; color: white; background-color: var(--axel-red); font-weight: 500; transition: background-color 0.2s; cursor: pointer; }
+        .btn-danger:hover { background-color: var(--axel-red-hover); }
+        .btn-small { padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; }
+        .btn-link { color: var(--axel-green); font-weight: 500; cursor: pointer; }
+        .btn-link:hover { text-decoration: underline; color: var(--axel-green-hover); }
+        
+        .btn-shortcut {
+            padding: 0 0.5rem; height: 100%;
+            background-color: #e5e7eb; color: #374151;
+            border-left: 1px solid #d1d5db;
+            font-size: 1.25rem; font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-shortcut:hover { background-color: #d1d5db; }
+        :root.dark .btn-shortcut { background-color: #4B5563; color: #F9FAFB; border-left-color: #5a6678; }
+        :root.dark .btn-shortcut:hover { background-color: #5a6678; }
+
+        .input-group { display: flex; align-items: center; width: 100%; border: 1px solid var(--border-color); border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden; }
+        .input-group:focus-within { border-color: var(--axel-green); box-shadow: 0 0 0 2px rgba(46, 154, 69, 0.4); outline: none; }
+        
+        /* Formulários */
+        .input:focus {
+            border-color: var(--axel-green);
+            box-shadow: 0 0 0 2px rgba(46, 154, 69, 0.4);
+            outline: none;
+        }
+        .input { width: 100%; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.5rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        select[multiple].input { height: 10rem; padding: 0; }
+        select[multiple].input option { padding: 0.5rem 0.75rem; }
+        
+        /* Navegação Lateral (Item 4) */
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        #sidebar { background-color: var(--bg-sidebar); }
+        #sidebar nav { border-top: 1px solid var(--bg-sidebar-hover); }
+        
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            cursor: pointer;
+            margin-bottom: 0.25rem;
+            color: var(--text-on-sidebar);
+            /* Borda transparente para alinhamento */
+            border-left: 4px solid transparent; 
+        }
+        .nav-link svg {
+            width: 1.25rem; height: 1.25rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+        .nav-link.inactive:hover { 
+            background-color: var(--bg-sidebar-hover); 
+            color: var(--text-on-sidebar-active); 
+        }
+        
+        /* Correção do indicador de menu ativo */
+        .nav-link.active {
+            background-color: var(--bg-sidebar-hover);
+            color: var(--text-on-sidebar-active);
+            font-weight: 600;
+            border-left: 4px solid var(--axel-green);
+        }
+
+        /* Outros estilos */
+        dialog::backdrop { background-color: rgba(0,0,0,0.5); }
+        .cadastro-list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.25rem; border-bottom-width: 1px; border-color: var(--border-color); }
+    
+        /* Resumo do Orçamento */
+        .orcamento-resumo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.5rem; padding: 0.75rem;
+            background-color: var(--bg-secondary);
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+        }
+        .orcamento-resumo-item { text-align: center; }
+        .orcamento-resumo-item .label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); }
+        .orcamento-resumo-item .value { font-size: 1rem; font-weight: 600; }
+        
+        /* Ocultar elementos por permissão */
+        .protected-role { display: none; }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-poppins">
+
+    <div id="loading-overlay" class="fixed inset-0 bg-white z-50 flex flex-col justify-center items-center">
+        <svg class="animate-spin h-10 w-10 text-[var(--axel-green)]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="mt-4 text-lg font-medium text-gray-700" id="loading-message">Conectando ao banco de dados...</p>
+    </div>
+
+    <div id="toast" class="fixed top-5 right-5 z-[100] p-4 rounded-lg shadow-lg text-white transition-transform translate-x-full duration-300">
+        <span id="toast-message"></span>
+    </div>
+
+    <dialog id="authModal" class="p-0 rounded-lg shadow-xl w-full max-w-sm z-50 overflow-hidden">
+        
+        <div id="auth-login-view">
+            <form id="form-login" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Login - Gestão de Compras</h3>
+                <div id="login-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" type="email" class="input" required />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input name="password" type="password" class="input" required />
+                </div>
+                
+                <div class="flex justify-between items-center text-sm">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="check-remember-me" name="remember" class="h-4 w-4 rounded text-[var(--axel-green)] border-gray-300 focus:ring-[var(--axel-green)]">
+                        <label for="check-remember-me" class="text-gray-600">Lembrar-me</label>
+                    </div>
+                    <button type="button" id="btn-forgot-password" class="btn-link text-xs">Esqueci a senha</button>
+                </div>
+                
+                <button type="submit" class="btn w-full">Entrar</button>
+                <p class="text-sm text-center">Não tem uma conta? <button type="button" id="btn-show-signup" class="btn-link">Registe-se</button></p>
+            </form>
+        </div>
+        
+        <div id="auth-signup-view" class="hidden">
+            <form id="form-signup" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Criar Conta</h3>
+                <div id="signup-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Seu Nome</label><input name="nome" type="text" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input name="email" type="email" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha (mín. 6 caracteres)</label><input name="password" type="password" class="input" required minlength="6" /></div>
+                <button type="submit" class="btn w-full">Criar Conta</button>
+                <p class="text-sm text-center">Já tem uma conta? <button type="button" id="btn-show-login" class="btn-link">Fazer Login</button></p>
+            </form>
+        </div>
+
+        <div id="auth-forgot-view" class="hidden">
+            <form id="form-forgot-password" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Redefinir Senha</h3>
+                <div id="forgot-success" class="hidden p-2 bg-green-100 text-green-700 text-sm rounded-md"></div>
+                <div id="forgot-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+                
+                <p class="text-sm text-gray-600">Insira o seu email. Enviaremos um link para você criar uma nova senha.</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" type="email" class="input" required />
+                </div>
+                
+                <button type="submit" class="btn w-full">Enviar Link</button>
+                <p class="text-sm text-center"><button type="button" id="btn-show-login-from-forgot" class="btn-link">Voltar ao Login</button></p>
+            </form>
+        </div>
+        
+    </dialog>
+
+    <dialog id="pdfModal" class="w-[90vw] h-[90vh] p-0 rounded-xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
+            <div class="font-medium" id="pdfTitle">Visualizando PDF</div>
+            <div class="space-x-2">
+                <a id="btnDownloadPdf" href="#" download="download.pdf" class="btn-secondary btn-small" target="_blank">Baixar PDF</a>
+                <button id="btnClosePdf" class="btn-secondary btn-small">Fechar</button>
+            </div>
+        </div>
+        <div id="pdfContainer" class="w-full h-[calc(90vh-48px)] overflow-auto bg-gray-200">
+            <div id="pdfLoader" class="flex justify-center items-center h-full text-gray-500">Carregando...</div>
+        </div>
+    </dialog>
+    
+    <dialog id="confirmModal" class="p-6 rounded-lg shadow-xl z-50">
+        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ação</h3>
+        <p class="py-4" id="confirmMessage">Você tem certeza?</p>
+        <div class="flex justify-end space-x-2">
+            <button id="btnConfirmCancel" class="btn-secondary">Cancelar</button>
+            <button id="btnConfirmOk" class="btn-danger">Confirmar</button>
+        </div>
+    </dialog>
+    
+    <dialog id="obraEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Obra</h3>
+            <form id="form-edit-obra" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome da Obra *</label><input name="nome_obra" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Número da O.S. *</label><input name="numero_os" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Cliente</label><input name="cliente" class="input" /></div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Valor Orçado (R$)</label><input name="valor_orcado" data-mask="currency" class="input" required data-role-field="diretor" /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Tolerância (%)
+</label><input name="tolerancia_percentual" type="number" step="0.1" min="0" class="input" placeholder="Ex: 5" data-role-field="diretor" /></div>
+                </div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditObraCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    
+    <dialog id="compraEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-3xl z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Compra</h3>
+            <div id="edit-orcamento-resumo" class="orcamento-resumo-grid mb-4 hidden"></div>
+            <form id="form-edit-compra" class="space-y-4">
+                <input type="hidden" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Obra / O.S. *</label><select name="obraId" class="input mt-1" required></select></div>
+                    
+                    <div><label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                        <div class="input-group mt-1">
+                                            <select name="fornecedorId"></select>
+                                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                        <div class="input-group mt-1">
+                            <select name="compradorId" required></select>
+                        </div>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700">Número NF-e *</label><input name="numero_nf" class="input mt-1" required pattern="[0-9]*" title="Apenas números são permitidos." /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Data Emissão *</label><input name="data_emissao" type="date" class="input mt-1" required /></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                    <div class="input-group mt-1">
+                        <select name="centroCustoId" required></select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <div><label class="block text-sm font-medium text-gray-700">Valor Total (R$)</label><input name="valor_total" data-mask="currency" class="input mt-1" required /></div>
+                     <div><label class="block text-sm font-medium text-gray-700">Natureza da Compra *</label><select name="natureza_compra" class="input mt-1" required><option value="Lista de Material inicial">Lista de Material inicial</option><option value="Material Adicional">Material Adicional</option><option value="Desperdício">Desperdício</option></select></div>
+                     <div><label class="block text-sm font-medium text-gray-700">Previsão de Entrega</label><input name="previsao_entrega" type="date" class="input mt-1" /></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Status da Compra *</label>
+                        <select name="status_compra" class="input mt-1" required>
+                            <option value="Não iniciado">Não iniciado</option>
+                            <option value="Em cotação">Em cotação</option>
+                            <option value="Comprado">Comprado</option>
+                            <option value="Recebido">Recebido</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700">Data de Recebimento</label><input name="data_recebimento" type="date" class="input mt-1" /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Status Aprovação</label>
+                        <select name="status_aprovacao" class="input mt-1" data-role-field="diretor">
+                            <option value="Aprovado">Aprovado</option>
+                            <option value="Pendente">Pendente</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="edit-justificativa-wrapper" class="hidden">
+                    <label class="block text-sm font-medium text-red-700">Justificativa de Estouro de Orçamento *</label>
+                    <textarea name="justificativa_estouro_orcamento" class="input mt-1 w-full" rows="3" placeholder="Descreva o motivo para ultrapassar o limite de orçamento..."></textarea>
+                </div>
+                
+                <div class="border rounded-lg p-3 space-y-2 bg-gray-50">
+                    <h4 class="font-medium text-sm text-gray-800">Auditoria de Anexos</h4>
+                    <div class="flex items-center">
+                        <input id="edit-nf_conferida" name="nf_conferida" type="checkbox" class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <label for="edit-nf_conferida" class="ml-2 block text-sm text-gray-900">NF-e / CT-e Conferido</label>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div><label class="block font-medium text-gray-500">Conferido por:</label><input id="edit-nf_conferida_por" name="nf_conferida_por" type="text" class="input !text-xs !py-1 bg-gray-100" readonly disabled /></div>
+                        <div><label class="block font-medium text-gray-500">Conferido em:</label><input id="edit-nf_conferida_em" name="nf_conferida_em" type="text" class="input !text-xs !py-1 bg-gray-100" readonly disabled /></div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500">Nota: Para alterar os PDFs (NF-e/CT-e), é necessário excluir e registrar a compra novamente.</p>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCompraCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="compradorEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Comprador</h3>
+            <form id="form-edit-comprador" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input name="email" type="email" class="input" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCompradorCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="fornecedorEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Fornecedor</h3>
+            <form id="form-edit-fornecedor" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">CNPJ</label><input name="cnpj" class="input" data-mask="cnpj" placeholder="00.000.000/0000-00" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditFornecedorCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="centroCustoEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Centro de Custo</h3>
+            <form id="form-edit-centro-custo" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Código</label><input name="codigo" class="input" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCentroCustoCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+
+    <div class="flex hidden" id="main-layout">
+        <aside id="sidebar" class="w-64 bg-gray-800 text-white h-screen sticky top-0 flex flex-col flex-shrink-0">
+            
+            <div class="p-6 flex items-center justify-center border-b border-gray-700">
+                <img src="./images/logo_axel__principal.png" alt="Logo da Axel" class="h-10 w-auto">
+            </div>
+            
+            <nav id="navigation" class="flex-grow p-4 space-y-1">
+                </nav>
+            
+            <div class="p-4 border-t border-gray-700">
+                <div id="user-info" class="text-xs text-gray-400 mb-2 truncate" title="Utilizador Logado">...</div>
+                <button id="btn-logout" class="btn-danger w-full btn-small !py-2">Sair</button>
+            </div>
+        </aside>
+
+        <main id="content-area" class="flex-grow h-screen overflow-y-auto">
+            <div class="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8 space-y-6">
+
+                <section id="page-dashboard-geral" class="page active space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Dashboard Geral</h2>
+                        <div id="dashboard-geral-kpis" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Obras Ativas</div><div id="kpi-geral-obras" class="text-2xl font-bold text-gray-700">-</div></div>
+                            <div class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Orçamento Total</div><div id="kpi-geral-orcamento" class="text-2xl font-bold text-blue-600">-</div></div>
+                            <div class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Comprometido Total</div><div id="kpi-geral-gasto" class="text-2xl font-bold text-red-600">-</div></div>
+                            <div class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">% Orçamento Usado</div><div id="kpi-geral-percent" class="text-2xl font-bold text-gray-700">-</div></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card"><h3 class="text-lg font-medium text-center mb-2">% Orçamento Consumido por Obra</h3><canvas id="barChartGeral"></canvas></div>
+                        <div class="card"><h3 class="text-lg font-medium text-center mb-2">Gastos Totais por Natureza</h3><canvas id="pieChartGeral"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-medium text-center mb-2">Evolução de Compras (Por Mês)</h3>
+                        <canvas id="lineChartGeral"></canvas>
+                    </div>
+                </section>
+
+                <section id="page-dashboard" class="page space-y-6">
+                    <div class="card">
+                        <h2 id="dashboard-title" class="text-xl font-bold text-center mb-4">Selecione a Obra para Análise</h2>
+                        <div class="w-full max-w-xl mx-auto space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="dashboard-search-query" type="text" class="input" placeholder="Buscar por Nome/OS...">
+                                <select id="dashboard-status-filter" class="input">
+                                    <option value="Ativas">Ativas (Não Iniciada / Em Andamento)</option>
+                                    <option value="Todas">Todas</option>
+                                    <option value="Não Iniciada">Não Iniciada</option>
+                                    <option value="Em Andamento">Em Andamento</option>
+                                    <option value="Finalizada">Finalizada</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Selecione a Obra:</label>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <select id="dashboard-obra-select" class="input w-full">
+                                        <option value="">-- Use os filtros acima --</option>
+                                    </select>
+                                    <button id="btn-dashboard-refresh" class="btn-secondary btn-small !p-2 hidden" title="Atualizar dados da obra">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h2 id="dashboard-analysis-title" class="text-2xl font-bold text-center -my-2 hidden"></h2>
+
+                    <div id="dashboard-content" class="hidden space-y-6">
+                            <div class="card space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div id="kpi-orcado-card" class="card text-center bg-blue-50 border border-blue-200"><div class="text-sm font-medium text-gray-500">ORÇADO</div><div id="kpi-orcado" class="text-2xl font-bold text-blue-600"></div></div>
+                                <div id="kpi-gasto-card" class="card text-center bg-red-50 border border-red-200"><div class="text-sm font-medium text-gray-500">GASTO</div><div id="kpi-gasto" class="text-2xl font-bold text-red-600"></div></div>
+                                <div id="kpi-balanco-card" class="card text-center"><div class="text-sm font-medium text-gray-500">BALANÇO</div><div id="kpi-balanco" class="text-2xl font-bold"></div></div>
+                                <div id="kpi-percent-card" class="card text-center"><div class="text-sm font-medium text-gray-500">% GASTO</div><div id="kpi-percent" class="text-2xl font-bold"></div></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div id="kpi-qt-total-card" class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Total de Compras</div><div id="kpi-qt-total" class="text-2xl font-bold text-gray-700"></div></div>
+                                <div id="kpi-qt-aguardando-card" class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Aguardando Entrega</div><div id="kpi-qt-aguardando" class="text-2xl font-bold text-blue-600"></div></div>
+                                <div id="kpi-qt-recebidas-card" class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Compras Recebidas</div><div id="kpi-qt-recebidas" class="text-2xl font-bold text-green-600"></div></div>
+                                <div id="kpi-qt-atraso-card" class="card text-center bg-gray-50 border border-gray-200"><div class="text-sm font-medium text-gray-500">Compras em Atraso</div><div id="kpi-qt-atraso" class="text-2xl font-bold text-gray-700"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="card lg:col-span-2"><h3 class="text-lg font-medium text-center mb-2">Análise Comparativa de Custos</h3><canvas id="barChart"></canvas></div>
+                            <div class="card"><h3 class="text-lg font-medium text-center mb-2">Gasto por Natureza</h3><canvas id="pieChart"></canvas></div>
+                        </div>
+                        
+                        <div class="card lg:col-span-3">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-lg font-medium text-center">Gasto por Centro de Custo</h3>
+                                <button id="btn-clear-cc-filter" class="btn-secondary btn-small hidden">Limpar Filtro</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="max-w-xs mx-auto"><canvas id="donutChart"></canvas></div>
+                                <div id="cc-drilldown-table-wrapper" class="overflow-auto max-h-60">
+                                    </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold">Histórico de Compras da Obra</h3><button id="btn-export-csv" class="btn-secondary btn-small">Exportar CSV</button></div>
+                            <div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data Recebimento</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data NF-e</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">NF-e</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comprador</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Centro de Custo</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prev. Entrega</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">PDF</th>
+                            </tr></thead><tbody id="dashboard-table-body" class="divide-y divide-gray-200"></tbody></table></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-obras" class="page">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gestão de Obras</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50"><tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nome da Obra</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Número O.S.</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cliente</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                                </tr></thead>
+                                <tbody id="obras-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-relatorio-compras" class="page">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Relatório e Gestão de Compras</h2>
+                        <div class="space-y-4 mb-4 p-4 border rounded-lg bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                        <div class="input-group mt-1">
+                            <select name="fornecedorId"></select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                                        <div class="input-group mt-1">
+                                            <select name="compradorId" required></select>
+                                        </div>
+                                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Numero NF-e *</label>
+                        <input name="numero_nf" class="input mt-1" required pattern="[0-9]*" title="Apenas numeros sao permitidos." />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                    <div class="input-group mt-1">
+                        <select name="centroCustoId" required></select>
+                    </div>
+                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Descricao da Compra</label>
+                                    <textarea name="descricao_compra" rows="2" class="input mt-1 w-full" placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
+                                </div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Data Emissão (Início)</label><input id="report-filter-date-start" type="date" class="input"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Data Emissão (Fim)</label><input id="report-filter-date-end" type="date" class="input"></div>
+                                <div class="flex items-end"><button id="btn-report-buscar" class="btn w-full">Buscar Compras</button></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Obra</label><select id="report-filter-obra" class="input" multiple size="4"></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Fornecedor</label><select id="report-filter-fornecedor" class="input" multiple size="4"></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Comprador</label><select id="report-filter-comprador" class="input" multiple size="4"></select></div>
+                            </div>
+                            <p class="text-xs text-gray-500">Dica: Segure CTRL (ou CMD) para selecionar múltiplos itens nas listas.</p>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50"><tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" data-sort="obra">Obra (OS)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="nf">NF-e</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="status">Status</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="recebimento">Data Receb.</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="emissao">Data Emissão</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="comprador">Comprador</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase" data-sort="valor">Valor</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">PDFs</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                                </tr></thead>
+                                <tbody id="report-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-registro" class="page">
+                    <div class="max-w-4xl mx-auto space-y-4">
+                        <form id="form-compra" class="space-y-4">
+                            <div class="card space-y-4">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h2 class="text-xl font-bold">Registrar Nova Compra</h2>
+                                        <p class="text-sm text-gray-500">Primeiro selecione a obra para carregar o orcamento.</p>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="md:col-span-2 space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Buscar Obra *</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <input id="registro-search-query" type="text" class="input" placeholder="Buscar por Nome/OS...">
+                                            <select id="registro-status-filter" class="input">
+                                                <option value="Ativas">Ativas (Nao Iniciada / Em Andamento)</option>
+                                                <option value="Todas">Todas</option>
+                                            </select>
+                                        </div>
+                                        <select name="obraId" id="registro-obra-select" class="input" required>
+                                            <option value="">-- Use os filtros acima --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="registro-orcamento-resumo" class="orcamento-resumo-grid hidden"></div>
+                            </div>
+                            <div class="card space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                                        <div class="input-group mt-1">
+                                            <select name="fornecedorId"></select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                                        <div class="input-group mt-1">
+                                            <select name="compradorId" required></select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Numero NF-e *</label>
+                                        <input name="numero_nf" class="input mt-1" required pattern="[0-9]*" title="Apenas numeros sao permitidos." />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                                    <div class="input-group mt-1">
+                                        <select name="centroCustoId" required></select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Descricao da Compra</label>
+                                    <textarea name="descricao_compra" rows="2" class="input mt-1 w-full" placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Data Emissao *</label>
+                                        <input name="data_emissao" type="date" class="input mt-1" required />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Valor Total (R$)</label>
+                                        <input name="valor_total" data-mask="currency" class="input mt-1" required />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Natureza da Compra *</label>
+                                        <select name="natureza_compra" class="input mt-1" required>
+                                            <option value="Lista de Material inicial">Lista de Material inicial</option>
+                                            <option value="Material Adicional">Material Adicional</option>
+                                            <option value="Desperdicio">Desperdicio</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Previsao de Entrega</label>
+                                        <input name="previsao_entrega" type="date" class="input mt-1" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Status da Compra *</label>
+                                        <select name="status_compra" class="input mt-1" required>
+                                            <option value="Nao iniciado">Nao iniciado</option>
+                                            <option value="Em cotacao">Em cotacao</option>
+                                            <option value="Comprado">Comprado</option>
+                                            <option value="Recebido">Recebido</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Data de Recebimento</label>
+                                        <input name="data_recebimento" type="date" class="input mt-1" />
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <div class="flex items-center p-3 border rounded-lg bg-[var(--axel-green)] text-white gap-3">
+                                        <input id="registro-retirada-estoque" type="checkbox" name="retirada_estoque" class="h-4 w-4 rounded border-green-600 text-white focus:ring-green-700 bg-green-600 checked:bg-green-600 checked:border-green-700">
+                                        <label for="registro-retirada-estoque" class="ml-2 block text-sm font-medium text-white">Retirada do Estoque?</label>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="border rounded-lg p-3">
+                                        <label class="block text-sm font-medium text-gray-700">PDF da NF-e (Opcional, max 20MB)</label>
+                                        <input name="pdf_nf" type="file" accept="application/pdf" class="input mt-1 file:btn-secondary file:btn-small file:border-0 file:mr-2" />
+                                    </div>
+                                    <div class="border rounded-lg p-3">
+                                        <label class="block text-sm font-medium text-gray-700">PDF do CT-e (Opcional, max 20MB)</label>
+                                        <input name="pdf_cte" type="file" accept="application/pdf" class="input mt-1 file:btn-secondary file:btn-small file:border-0 file:mr-2" />
+                                    </div>
+                                </div>
+
+                                <div id="registro-justificativa-wrapper" class="hidden">
+                                    <label class="block text-sm font-medium text-red-700">Justificativa de Estouro de Orcamento *</label>
+                                    <textarea name="justificativa_estouro_orcamento" class="input mt-1 w-full" rows="3" placeholder="Descreva o motivo para ultrapassar o limite de orcamento..."></textarea>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button type="submit" class="btn px-6 py-3 text-base font-semibold">Salvar Compra</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+                
+                <section id="page-cadastro-obras" class="page space-y-6">
+                    <div id="cadastros-voltar-btn-wrapper" class="hidden">
+                        <button type="button" data-action="go-back" class="btn-secondary btn-small">? Voltar</button>
+                    </div>
+                    
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Cadastrar Nova Obra</h2>
+                        <form id="form-obra" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="obra-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome da Obra *</label>
+                                    <input id="obra-nome" name="nome_obra" class="input" required />
+                                </div>
+                                <div>
+                                    <label for="obra-os" class="block text-sm font-medium text-gray-700 mb-1">Número da O.S. (Único) *</label>
+                                    <input id="obra-os" name="numero_os" class="input" required />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="obra-cliente" class="block text-sm font-medium text-gray-700 mb-1">Cliente (Opcional)</label>
+                                    <input id="obra-cliente" name="cliente" class="input" />
+                                </div>
+                                <div>
+                                    <label for="obra-orcado" class="block text-sm font-medium text-gray-700 mb-1">Valor Orçado (R$) *</label>
+                                    <input id="obra-orcado" name="valor_orcado" data-mask="currency" class="input" required />
+                                </div>
+                                <div>
+                                    <label for="obra-tolerancia" class="block text-sm font-medium text-gray-700 mb-1">Tolerância (%)</label>
+                                    <input id="obra-tolerancia" name="tolerancia_percentual" type="number" step="0.1" min="0" class="input" placeholder="Ex: 5" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn w-full py-2.5">Salvar Obra</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Obras Cadastradas</h2>
+                        <div id="obras-table-wrapper" class="overflow-x-auto">
+                            </div>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-compradores" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Compradores</h2>
+                        <form id="form-comprador" class="space-y-3 mb-4">
+                            <div>
+                                <label for="comprador-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome do Comprador *</label>
+                                <input id="comprador-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="comprador-email" class="block text-sm font-medium text-gray-700 mb-1">Email (Opcional)</label>
+                                <input id="comprador-email" name="email" type="email" class="input" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo Comprador</button>
+                        </form>
+                        <hr class="my-4"><h3 class="font-medium mb-2">Compradores Cadastrados:</h3><ul id="lista-compradores" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-fornecedores" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Fornecedores</h2>
+                        <form id="form-fornecedor" class="space-y-3 mb-4">
+                            <div>
+                                <label for="fornecedor-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome do Fornecedor *</label>
+                                <input id="fornecedor-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="fornecedor-cnpj" class="block text-sm font-medium text-gray-700 mb-1">CNPJ (Opcional)</label>
+                                <input id="fornecedor-cnpj" name="cnpj" data-mask="cnpj" class="input" placeholder="00.000.000/0000-00" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo Fornecedor</button>
+                        </form>
+                        <hr class="my-4"><h3 class="font-medium mb-2">Fornecedores Cadastrados:</h3><ul id="lista-fornecedores" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-centros-custo" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Centros de Custo</h2>
+                        <form id="form-centro-custo" class="space-y-3 mb-4">
+                            <div>
+                                <label for="cc-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome (Ex: Fundação) *</label>
+                                <input id="cc-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="cc-codigo" class="block text-sm font-medium text-gray-700 mb-1">Código (Ex: 01.01) (Opcional)</label>
+                                <input id="cc-codigo" name="codigo" class="input" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo C. de Custo</button>
+                        </form>
+                        <hr class="my-4"><h3 class="font-medium mb-2">Centros de Custo Cadastrados:</h3><ul id="lista-centros-custo" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+                
+                <section id="page-relatorios-fornecedor" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Relatório por Fornecedor</h2>
+                        <div class="max-w-md mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Selecione o Fornecedor:</label>
+                            <select id="relatorio-fornecedor-select" class="input mt-1"></select>
+                        </div>
+                    </div>
+                    <div id="relatorio-fornecedor-content" class="hidden space-y-6">
+                        <div class="card text-center"><div class="text-sm font-medium text-gray-500">Total Gasto com <span id="rel-forn-nome" class="font-bold"></span></div><div id="rel-forn-total" class="text-3xl font-bold text-red-600"></div></div>
+                        <div class="card"><h3 class="text-lg font-bold mb-4">Histórico de Compras do Fornecedor</h3><div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Obra (O.S.)</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">NF-e</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">PDF</th>
+                        </tr></thead><tbody id="relatorio-fornecedor-table-body" class="divide-y divide-gray-200"></tbody></table></div></div>
+                    </div>
+                </section>
+
+                <section id="page-configuracoes" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Configurações</h2>
+                        
+                        <div class="space-y-4 max-w-md">
+                            <div>
+                                <label for="select-theme" class="block text-sm font-medium text-gray-700 mb-1">Tema da Interface</label>
+                                <select id="select-theme" class="input">
+                                    <option value="system">Padrão do Sistema</option>
+                                    <option value="light">Claro (Light)</option>
+                                    <option value="dark">Escuro (Dark)</option>
+                                </select>
+                            </div>
+
+                            <div data-role-show="administrador">
+                                <h3 class="text-lg font-medium mt-6 mb-2">Gestão de Usuários (Admin)</h3>
+                                <p class="text-sm text-gray-500">Em breve: Funcionalidade para promover ou alterar perfis de usuários.</p>
+                                </div>
+
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+        <!-- M9.1: Firebase config agora usa .env.local via Vite (não mais arquivo local) -->
+        <script type="module" src="js/app.js"></script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
