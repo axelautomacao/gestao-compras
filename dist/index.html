@@ -917,49 +917,36 @@
                         <div class="card space-y-4">
                             <h3 class="text-lg font-semibold text-gray-800">KPIs Principais</h3>
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div id="kpi-orcado-card" class="card text-center bg-blue-50 border border-blue-200">
-                                    <div class="text-sm font-medium text-gray-500"><span class="mr-1">💰</span>Orçamento Materiais</div>
-                                    <div id="kpi-orcado" class="text-2xl font-bold text-blue-600"></div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Total Orçado</div>
+                                    <div id="kpi-combined-total" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
-                                <div id="kpi-gasto-card" class="card text-center bg-red-50 border border-red-200">
-                                    <div class="text-sm font-medium text-gray-500"><span class="mr-1">💸</span>Gasto Materiais</div>
-                                    <div id="kpi-gasto" class="text-2xl font-bold text-red-600"></div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Total Executado</div>
+                                    <div id="kpi-combined-gasto" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
-                                <div id="kpi-balanco-card" class="card text-center">
-                                    <div class="text-sm font-medium text-gray-500"><span class="mr-1">⚖️</span>Balanço Materiais</div>
-                                    <div id="kpi-balanco" class="text-2xl font-bold"></div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Diferença</div>
+                                    <div id="kpi-combined-diff" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
-                                <div id="kpi-percent-card" class="card text-center">
-                                    <div class="text-sm font-medium text-gray-500"><span class="mr-1">📊</span>% Gasto Materiais</div>
-                                    <div id="kpi-percent" class="text-2xl font-bold"></div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">% Gasto Total</div>
+                                    <div id="kpi-combined-percent" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div class="card text-center bg-blue-50 border border-blue-200">
-                                    <div class="text-sm font-medium text-gray-500">Orçamento de Horas (R$)</div>
-                                    <div id="kpi-horas-orcadas" class="text-2xl font-bold text-blue-700"></div>
-                                </div>
-                                <div class="card text-center bg-red-50 border border-red-200">
-                                    <div class="text-sm font-medium text-gray-500">Gasto de Horas (R$)</div>
-                                    <div id="kpi-horas-gastas" class="text-2xl font-bold text-red-700"></div>
-                                </div>
-                                <div class="card text-center bg-emerald-50 border border-emerald-200">
-                                    <div class="text-sm font-medium text-gray-500">Dif. Valor Horas</div>
-                                    <div id="kpi-horas-diff" class="text-2xl font-bold text-emerald-700"></div>
-                                </div>
-                                <div class="card text-center bg-indigo-50 border border-indigo-200">
-                                    <div class="text-sm font-medium text-gray-500">% Gasto Horas</div>
-                                    <div id="kpi-horas-percent" class="text-2xl font-bold text-indigo-700"></div>
-                                </div>
+                            <div class="card">
+                                <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Comparação Orçado vs Executado (Materiais + Mão de Obra)</h4>
+                                <canvas id="combinedStackedChart" style="height:260px;"></canvas>
                             </div>
                         </div>
 
+                        
                         <div id="mao-obra-section" class="card space-y-4">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-semibold">Análise de Mão de Obra</h3>
+                                <h3 class="text-lg font-semibold">An&aacute;lise de M&atilde;o de Obra</h3>
                                 <span class="text-xs text-gray-500">Integrado via RDO</span>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-stretch">
                                 <div class="p-4 border rounded-lg bg-gray-50">
                                     <div class="text-sm text-gray-500">Horas Previstas (Normais + Extras)</div>
                                     <div id="kpi-horas-previstas" class="text-2xl font-bold text-gray-800"></div>
@@ -973,7 +960,7 @@
                                     <div id="kpi-horas-saldo" class="text-2xl font-bold text-amber-700"></div>
                                 </div>
                                 <div class="p-4 border rounded-lg bg-emerald-50">
-                                    <div class="text-sm text-gray-500">Custo Est. Mão de Obra</div>
+                                    <div class="text-sm text-gray-500">Custo Est. M&atilde;o de Obra</div>
                                     <div id="kpi-custo-mao" class="text-2xl font-bold text-emerald-700"></div>
                                 </div>
                                 <div class="p-4 border rounded-lg bg-orange-50">
@@ -991,7 +978,7 @@
                                     <canvas id="hoursCompareChart" style="height:260px; max-height:260px;"></canvas>
                                 </div>
                                 <div class="p-4 border rounded-lg bg-white">
-                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Evolução Diária de Horas</h4>
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Evolu&ccedil;&atilde;o Di&aacute;ria de Horas</h4>
                                     <canvas id="hoursDailyChart" style="height:260px; max-height:260px;"></canvas>
                                 </div>
                             </div>
@@ -999,127 +986,185 @@
                                 <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Curva S de Horas</h4>
                                 <canvas id="curveHoursChart" style="height:280px; max-height:280px;"></canvas>
                             </div>
-                            <div class="p-4 border rounded-lg bg-white">
-                                <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Distribuição de Horas</h4>
-                                <canvas id="rdoHoursChart" style="height:280px; max-height:280px;"></canvas>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Distribui&ccedil;&atilde;o de Horas</h4>
+                                    <canvas id="rdoHoursChart" style="height:260px; max-height:260px;"></canvas>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Top T&eacute;cnicos (horas)</h4>
+                                    <table class="min-w-full text-sm">
+                                        <thead class="text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left">T&eacute;cnico</th>
+                                                <th class="px-2 py-1 text-right">Horas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rdo-tech-table" class="divide-y divide-gray-200">
+                                            <tr><td class="px-2 py-2 text-center text-gray-400" colspan="2">Sem dados</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                             <div class="p-4 border rounded-lg bg-white">
                                 <div class="flex items-center justify-between mb-2">
-                                    <h4 class="text-sm font-semibold text-gray-700">Relatórios RDO</h4>
-                                    <span class="text-xs text-gray-500">Últimos registros</span>
+                                    <h4 class="text-sm font-semibold text-gray-700">Relat&oacute;rios RDO</h4>
+                                    <span class="text-xs text-gray-500">&Uacute;ltimos registros</span>
                                 </div>
                                 <div class="overflow-auto max-h-72">
                                     <table class="min-w-full text-sm">
                                         <thead class="text-xs uppercase text-gray-500">
                                             <tr>
                                                 <th class="px-3 py-2 text-left">Data</th>
+                                                <th class="px-3 py-2 text-left">Dia</th>
                                                 <th class="px-3 py-2 text-right">Horas</th>
                                                 <th class="px-3 py-2 text-right">Horas Extras</th>
-                                                <th class="px-3 py-2 text-center">Técnicos</th>
-                                                <th class="px-3 py-2 text-center">Horário</th>
-                                                <th class="px-3 py-2 text-center">Nº Relatório</th>
+                                                <th class="px-3 py-2 text-center">T&eacute;cnicos</th>
+                                                <th class="px-3 py-2 text-center">Hor&aacute;rio</th>
+                                                <th class="px-3 py-2 text-center">N&ordm; Relat&oacute;rio</th>
                                             </tr>
                                         </thead>
                                         <tbody id="rdo-table-body" class="divide-y divide-gray-200">
-                                            <tr><td class="px-3 py-2 text-center text-gray-400" colspan="6">Sem dados RDO</td></tr>
+                                            <tr><td class="px-3 py-2 text-center text-gray-400" colspan="7">Sem dados RDO</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
 
-                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                                <div class="card h-full">
-                                    <h3 class="text-lg font-medium text-center mb-2">Análise Comparativa de Custos</h3>
-                                    <canvas id="barChart" style="height:320px; max-height:320px;"></canvas>
+                        <div class="card space-y-6">
+                            <h3 class="text-lg font-semibold text-gray-800">An&aacute;lise de Gastos com Materiais</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Or&ccedil;amento Materiais</div>
+                                    <div id="kpi-orcado" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
-                                <div class="card h-full">
-                                    <h3 class="text-lg font-medium text-center mb-2">Gasto por Natureza</h3><canvas
-                                    id="pieChart" style="height:320px; max-height:320px;"></canvas>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Gasto Materiais</div>
+                                    <div id="kpi-gasto" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
-                                <div class="card h-full">
-                                    <h3 class="text-lg font-medium text-center mb-2">Análise de Horas (RDO)</h3>
-                                    <canvas id="rdoHoursChart" style="height:320px; max-height:320px;"></canvas>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Balan&ccedil;oo Materiais</div>
+                                    <div id="kpi-balanco" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">% Gasto Materiais</div>
+                                    <div id="kpi-percent" class="text-2xl font-bold text-gray-800"></div>
                                 </div>
                             </div>
-
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Total de Compras</div>
+                                    <div id="kpi-qt-total" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Aguardando Entrega</div>
+                                    <div id="kpi-qt-aguardando" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Compras Recebidas</div>
+                                    <div id="kpi-qt-recebidas" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Compras em Atraso</div>
+                                    <div id="kpi-qt-atraso" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Economia Gerada</div>
+                                    <div id="kpi-obra-economia" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">SLA de Entregas</div>
+                                    <div id="kpi-obra-sla" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Lead Time M&eacute;dio</div>
+                                    <div id="kpi-obra-lead" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Curva S Planejado vs Real</div>
+                                    <div id="kpi-obra-curva" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                                <div class="card h-full">
+                                    <h3 class="text-lg font-medium text-center mb-2">An&aacute;lise Comparativa de Custos</h3>
+                                    <canvas id="barChart" style="height:360px; max-height:360px;"></canvas>
+                                </div>
+                                <div class="card h-full">
+                                    <h3 class="text-lg font-medium text-center mb-2">Gasto por Natureza</h3>
+                                    <canvas id="pieChart" style="height:360px; max-height:360px;"></canvas>
+                                </div>
+                            </div>
                             <div class="card">
                                 <h3 class="text-lg font-medium text-center mb-2">Curva S Detalhada (Planejado vs Real)</h3>
                                 <p class="text-sm text-gray-500 text-center mb-4">Valores acumulados mensais da obra selecionada.</p>
                                 <canvas id="curveSDetail" style="height:320px;"></canvas>
                             </div>
-
-                        <div class="card lg:col-span-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-lg font-medium text-center">Gasto por Centro de Custo</h3>
-                                <button id="btn-clear-cc-filter" class="btn-secondary btn-small hidden">Limpar
-                                    Filtro</button>
+                            <div class="card">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-lg font-medium text-center">Gasto por Centro de Custo</h3>
+                                    <button id="btn-clear-cc-filter" class="btn-secondary btn-small hidden">Limpar Filtro</button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="max-w-xs mx-auto"><canvas id="donutChart"></canvas></div>
+                                    <div id="cc-drilldown-table-wrapper" class="overflow-auto max-h-60">
+                                        <table class="min-w-full text-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">Centro de Custo</th>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">Valor</th>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">% do Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cc-summary-table" class="divide-y divide-gray-200"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="max-w-xs mx-auto"><canvas id="donutChart"></canvas></div>
-                                <div id="cc-drilldown-table-wrapper" class="overflow-auto max-h-60">
-                                    <table class="min-w-full text-sm">
-                                        <thead>
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h3 class="text-lg font-medium">Calend&aacute;rio de Compras</h3>
+                                        <p class="text-sm text-gray-500">Emiss&atilde;oo, previs&atilde;o e recebimento.</p>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <button id="btn-calendar-prev" class="btn-secondary btn-small"&larr;/button>
+                                        <button id="btn-calendar-next" class="btn-secondary btn-small"&larr;/button>
+                                        <select id="calendar-filter-type" class="input">
+                                            <option value="all">Tudo</option>
+                                            <option value="compra">Emiss&atilde;oo</option>
+                                            <option value="previsao">Previs&atilde;o</option>
+                                            <option value="recebimento">Recebimento</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="dashboard-calendar" class="w-full h-80 border rounded-lg bg-white"></div>
+                            </div>
+                            <div class="card">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold">Hist&oacute;rico de Compras da Obra</h3>
+                                    <button id="btn-export-csv" class="btn-secondary btn-small">Exportar CSV</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
                                             <tr>
-                                                <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">Centro de Custo</th>
-                                                <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">Valor</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data Solicita&ccedil;&atilde;o</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Data Compra</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Prev. Entrada</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Comprador</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Centro de Custo</th>
+                                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase text-center">A&ccedil;&otilde;es</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="cc-summary-table" class="divide-y divide-gray-200"></tbody>
+                                        <tbody id="dashboard-table-body" class="divide-y divide-gray-200"></tbody>
                                     </table>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <h3 class="text-lg font-medium">Calendário de Compras</h3>
-                                    <p class="text-sm text-gray-500">Emissão, previsão e recebimento.</p>
-                                </div>
-                                <div class="flex gap-2 items-center">
-                                    <button id="btn-calendar-prev" class="btn-secondary btn-small">←</button>
-                                    <button id="btn-calendar-next" class="btn-secondary btn-small">→</button>
-                                    <select id="calendar-filter-type" class="input">
-                                        <option value="all">Tudo</option>
-                                        <option value="compra">Emissão</option>
-                                        <option value="previsao">Previsão</option>
-                                        <option value="recebimento">Recebimento</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="dashboard-calendar" class="w-full h-80 border rounded-lg bg-white"></div>
-                        </div>
-
-                        <div class="card">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-bold">Histórico de Compras da Obra</h3><button
-                                    id="btn-export-csv" class="btn-secondary btn-small">Exportar CSV</button>
-                            </div>
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Data Solicitação</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Status</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Data Compra</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Prev. Entrada</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Valor</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Comprador</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Centro de Custo</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase text-center">
-                                                Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboard-table-body" class="divide-y divide-gray-200"></tbody>
-                                </table>
                             </div>
                         </div>
                     </div>

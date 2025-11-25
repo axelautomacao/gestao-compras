@@ -32,6 +32,23 @@ export const UI = {
     ...UIForms,
     ...UIReports,
 
+    showCompraDetails: async (compraId) => {
+        // Aproveita o modal de edição para visualizar (modo leitura seria um extra futuro)
+        await UIForms.showCompraEditModal(compraId);
+    },
+
+    handleCalendarFilterChange: () => {
+        if (state.currentObraId) {
+            UIDashboard.renderDashboardStats(state.currentObraId);
+        }
+    },
+
+    shiftCalendarWindow: () => {
+        if (state.currentObraId) {
+            UIDashboard.renderDashboardStats(state.currentObraId);
+        }
+    },
+
     // (Item 3): Lógica do Tema
     initTheme: () => {
         const theme = localStorage.getItem('theme') || 'system';

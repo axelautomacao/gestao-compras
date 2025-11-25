@@ -1,5 +1,5 @@
 ﻿import { getIntegratedDataForObra } from './services/diarioDeObraApi.js';
-import { generatePlannedValueData, generateActualValueData, parseHoras, getDaysArray, formatDate } from './utils/sCurve.js';
+import { generatePlannedValueData, generateActualValueData, parseHoras, getDaysArray, getWorkdaysArray, formatDate } from './utils/sCurve.js';
 import { COST_PER_HOUR, COST_PER_OVERTIME_HOUR } from './constants/costs.js';
 import { state } from './state.js';
 import { Utils } from './utils.js';
@@ -7,11 +7,13 @@ import { Data } from './data.js';
 import { NotificationManager } from './notification-manager.js';
 
 const $ = (id) => document.getElementById(id);
+const VIEW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>`;
 
 let barChart, pieChart, donutChart, rdoHoursChart, sCurveChart, hoursCompareChart, hoursDailyChart, hoursCurveChart;
 let barChartGeral, pieChartGeral, lineChartGeral;
 
 const calendarState = { timeline: null, dataset: null, compras: [] };
+const EXTRA_FACTOR = 1.5;
 
 const showPlaceholder = (canvasEl, message) => {
     if (!canvasEl) return;
@@ -75,6 +77,7 @@ const safeText = (id, text) => {
     const el = $(id);
     if (el) el.textContent = text;
 };
+const setKpi = (id, text) => safeText(id, text);
 
 const parseDateRdo = (raw) => {
     if (!raw) return null;
@@ -97,6 +100,12 @@ const isoDate = (raw) => {
 const fmtDateBR = (raw) => {
     const iso = isoDate(raw);
     return iso ? Utils.fmtBR(iso) : 'N/D';
+};
+
+const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const weekdayLabel = (raw) => {
+    const d = parseDateRdo(raw);
+    return d ? WEEKDAYS[d.getDay()] : 'N/D';
 };
 
 export const UIDashboard = {
@@ -270,8 +279,10 @@ export const UIDashboard = {
                 };
 
                 let dailyMap = new Map();
-                let plannedTotal = (Number(obra?.horas_previstas) || 0) + (Number(obra?.horas_extras_previstas) || 0);
-                let horasExecutadas = 0;
+                let plannedNormais = Number(obra?.horas_previstas) || 0;
+                let plannedExtras = Number(obra?.horas_extras_previstas) || 0;
+                let plannedTotalEq = plannedNormais + (plannedExtras * EXTRA_FACTOR);
+                let horasExecutadasEq = 0;
                 let horasExtras = 0;
                 let horasNormais = 0;
 
@@ -283,9 +294,9 @@ export const UIDashboard = {
                         return acc;
                     }, { normal: 0, extra: 0 });
 
-                    horasExecutadas = totals.normal + totals.extra;
-                    horasExtras = totals.extra;
                     horasNormais = totals.normal;
+                    horasExtras = totals.extra;
+                    horasExecutadasEq = horasNormais + (horasExtras * EXTRA_FACTOR);
                     custoRdo = (horasNormais * COST_PER_HOUR) + (horasExtras * COST_PER_OVERTIME_HOUR);
 
                     const rdoCtxEl = document.getElementById('rdoHoursChart');
@@ -303,15 +314,44 @@ export const UIDashboard = {
                         });
                     }
 
-                    const saldoHoras = plannedTotal - horasExecutadas;
+                    const saldoHoras = plannedTotalEq - horasExecutadasEq;
                     const custoMao = (horasNormais * COST_PER_HOUR) + (horasExtras * COST_PER_OVERTIME_HOUR);
-                    const setKpi = (id, text) => { const el = $(id); if (el) el.textContent = text; };
-                    setKpi('kpi-horas-previstas', `${plannedTotal.toFixed(2)}h`);
-                    setKpi('kpi-horas-executadas', `${horasExecutadas.toFixed(2)}h`);
+                    const horasExtrasPercent = horasNormais > 0 ? (horasExtras / horasNormais) * 100 : 0;
+                    setKpi('kpi-horas-previstas', `${plannedTotalEq.toFixed(2)}h`);
+                    setKpi('kpi-horas-executadas', `${horasExecutadasEq.toFixed(2)}h`);
                     setKpi('kpi-horas-saldo', `${saldoHoras.toFixed(2)}h`);
                     setKpi('kpi-custo-mao', Utils.formatCurrency(custoMao));
+                    setKpi('kpi-horas-extras-total', `${horasExtras.toFixed(2)}h`);
+                    setKpi('kpi-horas-extras-percent', `${horasExtrasPercent.toFixed(1)}%`);
+
+                    // KPIs monetários de horas e combinados
+                    const horasOrcadasValor = (plannedNormais * COST_PER_HOUR) + (plannedExtras * COST_PER_OVERTIME_HOUR);
+                    const horasGastasValor = custoMao;
+                    const horasDiffValor = horasOrcadasValor - horasGastasValor;
+                    const horasPercent = horasOrcadasValor > 0 ? (horasGastasValor / horasOrcadasValor) * 100 : 0;
+                    setKpi('kpi-horas-orcadas', Utils.formatCurrency(horasOrcadasValor));
+                    setKpi('kpi-horas-gastas', Utils.formatCurrency(horasGastasValor));
+                    setKpi('kpi-horas-diff', Utils.formatCurrency(horasDiffValor));
+                    setKpi('kpi-horas-percent', `${horasPercent.toFixed(1)}%`);
+
+                    const materiaisOrcado = resumoLocal.limite_real || 0;
+                    const materiaisGasto = resumoLocal.comprometido || 0;
+                    const combinadoOrcado = materiaisOrcado + horasOrcadasValor;
+                    const combinadoGasto = materiaisGasto + horasGastasValor;
+                    const combinadoPercent = combinadoOrcado > 0 ? (combinadoGasto / combinadoOrcado) * 100 : 0;
+                    const combinadoDiff = combinadoOrcado - combinadoGasto;
+                    setKpi('kpi-combined-total', Utils.formatCurrency(combinadoOrcado));
+                    setKpi('kpi-combined-gasto', Utils.formatCurrency(combinadoGasto));
+                    setKpi('kpi-combined-diff', Utils.formatCurrency(combinadoDiff));
+                    setKpi('kpi-combined-percent', `${combinadoPercent.toFixed(1)}%`);
 
                     dailyMap = new Map();
+                    const techMap = new Map();
+                    const addTechHours = (name, hrs) => {
+                        const key = name || 'Técnico';
+                        techMap.set(key, (techMap.get(key) || 0) + hrs);
+                    };
+
                     (rdoData.reports || []).forEach(rep => {
                         const dateIso = isoDate(rep.data || rep.createdAt || rep.data_inicio || rep.dataInicio);
                         if (!dateIso) return;
@@ -320,6 +360,15 @@ export const UIDashboard = {
                         cur.normal += normal;
                         cur.extra += extra;
                         dailyMap.set(dateIso, cur);
+
+                        (rep?.maoDeObra?.padrao || []).forEach(p => {
+                            const nome = p.nome || p.funcionario || p.descricao || 'Técnico';
+                            addTechHours(nome, Number(p.quantidade) || 0);
+                        });
+                        (rep?.maoDeObra?.personalizada || []).forEach(mo => {
+                            const nome = mo.nome || mo.funcionario || mo.descricao || 'Técnico';
+                            addTechHours(nome, parseHoras(mo.horasTrabalhadas));
+                        });
                     });
                     const dailyLabels = Array.from(dailyMap.keys()).sort();
                     const dailyNormais = dailyLabels.map(d => dailyMap.get(d).normal);
@@ -330,7 +379,7 @@ export const UIDashboard = {
                         if (hoursCompareChart) hoursCompareChart.destroy();
                         hoursCompareChart = new Chart(compareEl.getContext('2d'), {
                             type: 'bar',
-                            data: { labels: ['Previstas', 'Executadas'], datasets: [{ data: [plannedTotal, horasExecutadas], backgroundColor: ['#a5b4fc', '#34d399'] }] },
+                            data: { labels: ['Previstas', 'Executadas'], datasets: [{ data: [plannedTotalEq, horasExecutadasEq], backgroundColor: ['#a5b4fc', '#34d399'] }] },
                             options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
                         });
                     }
@@ -356,6 +405,22 @@ export const UIDashboard = {
                         }
                     }
 
+                    // Top técnicos
+                    const techTable = $('rdo-tech-table');
+                    if (techTable) {
+                        const rows = Array.from(techMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                        if (!rows.length) {
+                            techTable.innerHTML = `<tr><td colspan="2" class="px-2 py-2 text-center text-gray-400">Sem dados</td></tr>`;
+                        } else {
+                            techTable.innerHTML = rows.map(([name, hrs]) => `
+                                <tr>
+                                    <td class="px-2 py-2 text-gray-700">${Utils.escapeHtml(name)}</td>
+                                    <td class="px-2 py-2 text-right font-semibold">${hrs.toFixed(2)}h</td>
+                                </tr>
+                            `).join('');
+                        }
+                    }
+
                     const startStr = isoDate(obra?.data_prevista_inicio || obra?.data_inicio || dailyLabels[0]);
                     const endStr = isoDate(obra?.data_prevista_fim || obra?.data_fim || dailyLabels[dailyLabels.length - 1]);
                     const curveEl = document.getElementById('curveHoursChart');
@@ -366,7 +431,8 @@ export const UIDashboard = {
                             const days = getDaysArray(new Date(startStr), new Date(endStr));
                             if (days.length > 0) {
                                 hidePlaceholder(curveEl);
-                                const plannedPerDay = plannedTotal / days.length;
+                                const workdays = getWorkdaysArray(new Date(startStr), new Date(endStr));
+                                const plannedPerDay = workdays.length ? (plannedTotalEq / workdays.length) : 0;
                                 let plannedCum = 0;
                                 let actualCum = 0;
                                 const plannedPoints = [];
@@ -374,13 +440,16 @@ export const UIDashboard = {
                                 days.forEach(day => {
                                     const dateStr = formatDate(day);
                                     if (!dateStr) return;
-                                    plannedCum += plannedPerDay;
+                                    if (workdays.some(w => formatDate(w) === dateStr)) {
+                                        plannedCum += plannedPerDay;
+                                    }
                                     plannedPoints.push({ x: dateStr, y: plannedCum });
                                     const daily = dailyMap.get(dateStr);
-                                    if (daily) actualCum += (daily.normal + daily.extra);
+                                    if (daily) actualCum += (daily.normal + daily.extra * EXTRA_FACTOR);
                                     actualPoints.push({ x: dateStr, y: actualCum });
                                 });
                                 if (hoursCurveChart) hoursCurveChart.destroy();
+                                const weekendShades = days.filter(d => [0, 6].includes(d.getDay())).map(d => formatDate(d));
                                 hoursCurveChart = new Chart(curveEl.getContext('2d'), {
                                     type: 'line',
                                     data: {
@@ -389,7 +458,45 @@ export const UIDashboard = {
                                             { label: 'Horas Reais (AV)', data: actualPoints, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.1)' }
                                         ]
                                     },
-                                    options: { scales: { x: { type: 'time', time: { unit: 'day' } }, y: { beginAtZero: true } } }
+                                    options: {
+                                        plugins: {
+                                            weekendShades: { weekends: weekendShades }
+                                        },
+                                        scales: {
+                                            x: {
+                                                type: 'time',
+                                                time: { unit: 'day' },
+                                                ticks: {
+                                                    callback: function (val, idx, ticks) {
+                                                        const d = new Date(ticks[idx].value);
+                                                        const day = d.getDay();
+                                                        if (day === 1) return 'Seg';
+                                                        if (day === 5) return 'Sex';
+                                                        return ticks[idx].label;
+                                                    }
+                                                }
+                                            },
+                                            y: { beginAtZero: true }
+                                        }
+                                    },
+                                        plugins: [{
+                                            id: 'weekendShades',
+                                            beforeDraw: (chart, args, opts) => {
+                                                const { ctx, chartArea, scales } = chart;
+                                                if (!opts?.weekends?.length) return;
+                                                ctx.save();
+                                                ctx.fillStyle = 'rgba(200,200,200,0.12)';
+                                                opts.weekends.forEach(dateStr => {
+                                                    const start = new Date(`${dateStr}T12:00:00`);
+                                                    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+                                                    const x = scales.x.getPixelForValue(start);
+                                                    const next = scales.x.getPixelForValue(end);
+                                                    const width = Math.max(2, next - x);
+                                                    ctx.fillRect(x, chartArea.top, width, chartArea.bottom - chartArea.top);
+                                                });
+                                                ctx.restore();
+                                            }
+                                        }]
                                 });
                             } else {
                                 showPlaceholder(curveEl, 'Sem intervalo de datas suficiente para gerar a Curva S de horas.');
@@ -401,10 +508,12 @@ export const UIDashboard = {
                     if (rdoTable) {
                         const reports = (rdoData.reports || []).slice().sort((a, b) => (isoDate(b.data || b.createdAt || '') || '').localeCompare(isoDate(a.data || a.createdAt || '') || ''));
                         if (reports.length === 0) {
-                            rdoTable.innerHTML = `<tr><td colspan="6" class="px-3 py-2 text-center text-gray-400">Sem dados RDO</td></tr>`;
+                            rdoTable.innerHTML = `<tr><td colspan="7" class="px-3 py-2 text-center text-gray-400">Sem dados RDO</td></tr>`;
                         } else {
                             rdoTable.innerHTML = reports.map(r => {
-                                const date = fmtDateBR(r.data || r.createdAt || r.data_inicio || r.dataInicio);
+                                const dateRaw = r.data || r.createdAt || r.data_inicio || r.dataInicio;
+                                const date = fmtDateBR(dateRaw);
+                                const dia = weekdayLabel(dateRaw);
                                 const { normal, extra } = calcHorasReport(r);
                                 const qtdTecnicos = (r?.maoDeObra?.padrao?.length || 0) + (r?.maoDeObra?.personalizada?.length || 0);
                                 const ht = r.horarioDeTrabalho || {};
@@ -412,18 +521,48 @@ export const UIDashboard = {
                                 const horaFim = ht.expedienteFim || ht.fim || r.horaFim || r.horarioFim || r.fim || '';
                                 const horario = (horaInicio || horaFim) ? `${Utils.escapeHtml(horaInicio || 'N/D')} - ${Utils.escapeHtml(horaFim || 'N/D')}` : 'N/D';
                                 const numero = r._id ? String(r._id).slice(-8) : 'N/D';
-                                return `<tr><td class="px-3 py-2">${Utils.escapeHtml(date)}</td><td class="px-3 py-2 text-right font-semibold">${normal.toFixed(2)}h</td><td class="px-3 py-2 text-right text-orange-700 font-semibold">${extra.toFixed(2)}h</td><td class="px-3 py-2 text-center">${qtdTecnicos || 'N/D'}</td><td class="px-3 py-2 text-center">${horario}</td><td class="px-3 py-2 text-center">${Utils.escapeHtml(numero)}</td></tr>`;
+                                return `<tr><td class="px-3 py-2">${Utils.escapeHtml(date)}</td><td class="px-3 py-2">${Utils.escapeHtml(dia)}</td><td class="px-3 py-2 text-right font-semibold">${normal.toFixed(2)}h</td><td class="px-3 py-2 text-right text-orange-700 font-semibold">${extra.toFixed(2)}h</td><td class="px-3 py-2 text-center">${qtdTecnicos || 'N/D'}</td><td class="px-3 py-2 text-center">${horario}</td><td class="px-3 py-2 text-center">${Utils.escapeHtml(numero)}</td></tr>`;
                             }).join('');
                         }
                     }
                 } else {
-                    safeText('kpi-horas-previstas', `${plannedTotal.toFixed(2)}h`);
+                    safeText('kpi-horas-previstas', `${plannedTotalEq.toFixed(2)}h`);
                     safeText('kpi-horas-executadas', '0.00h');
-                    safeText('kpi-horas-saldo', `${plannedTotal.toFixed(2)}h`);
+                    safeText('kpi-horas-saldo', `${plannedTotalEq.toFixed(2)}h`);
                     safeText('kpi-custo-mao', Utils.formatCurrency(0));
+                    safeText('kpi-horas-extras-total', '0.00h');
+                    safeText('kpi-horas-extras-percent', '0.0%');
                     const rdoTable = $('rdo-table-body');
-                    if (rdoTable) rdoTable.innerHTML = `<tr><td colspan="5" class="px-3 py-2 text-center text-gray-400">Sem dados RDO</td></tr>`;
+                    if (rdoTable) rdoTable.innerHTML = `<tr><td colspan="7" class="px-3 py-2 text-center text-gray-400">Sem dados RDO</td></tr>`;
                 }
+
+                // KPIs de horas monetários também quando não há RDO
+                const horasOrcadasValor = (plannedNormais * COST_PER_HOUR) + (plannedExtras * COST_PER_OVERTIME_HOUR);
+                setKpi('kpi-horas-orcadas', Utils.formatCurrency(horasOrcadasValor));
+                if (!rdoData) {
+                    setKpi('kpi-horas-gastas', Utils.formatCurrency(0));
+                    setKpi('kpi-horas-diff', Utils.formatCurrency(horasOrcadasValor));
+                    setKpi('kpi-horas-percent', '0.0%');
+                }
+
+                // KPIs combinados (Materiais + Horas)
+                const horasGastasValor = rdoData ? (horasNormais * COST_PER_HOUR) + (horasExtras * COST_PER_OVERTIME_HOUR) : 0;
+                const horasPercent = horasOrcadasValor > 0 ? (horasGastasValor / horasOrcadasValor) * 100 : 0;
+                if (rdoData) {
+                    setKpi('kpi-horas-gastas', Utils.formatCurrency(horasGastasValor));
+                    setKpi('kpi-horas-diff', Utils.formatCurrency(horasOrcadasValor - horasGastasValor));
+                    setKpi('kpi-horas-percent', `${horasPercent.toFixed(1)}%`);
+                }
+                const materiaisOrcado = resumoLocal.limite_real || 0;
+                const materiaisGasto = resumoLocal.comprometido || 0;
+                const combinadoOrcado = materiaisOrcado + horasOrcadasValor;
+                const combinadoGasto = materiaisGasto + horasGastasValor;
+                const combinadoPercent = combinadoOrcado > 0 ? (combinadoGasto / combinadoOrcado) * 100 : 0;
+                const combinadoDiff = combinadoOrcado - combinadoGasto;
+                setKpi('kpi-combined-total', Utils.formatCurrency(combinadoOrcado));
+                setKpi('kpi-combined-gasto', Utils.formatCurrency(combinadoGasto));
+                setKpi('kpi-combined-diff', Utils.formatCurrency(combinadoDiff));
+                setKpi('kpi-combined-percent', `${combinadoPercent.toFixed(1)}%`);
 
                 const barCtxEl = document.getElementById('barChart');
                 const barCtx = barCtxEl ? barCtxEl.getContext('2d') : null;
@@ -526,10 +665,29 @@ export const UIDashboard = {
                                 backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#6366f1', '#8b5cf6', '#ec4899']
                             }]
                         },
-                        options: { plugins: { legend: { display: false } } }
+                        options: { plugins: { legend: { display: true, position: 'right' } } }
                     });
 
                     UIDashboard.renderCcDrilldown(ccMap);
+                }
+
+                const combinedEl = document.getElementById('combinedStackedChart');
+                if (combinedEl) {
+                    if (lineChartGeral) lineChartGeral.destroy();
+                    lineChartGeral = new Chart(combinedEl.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Planejado', 'Executado'],
+                            datasets: [
+                                { label: 'Materiais', data: [resumoLocal?.limite_real || 0, resumoLocal?.comprometido || 0], backgroundColor: '#60a5fa' },
+                                { label: 'Mão de Obra', data: [ (plannedNormais * COST_PER_HOUR) + (plannedExtras * COST_PER_OVERTIME_HOUR), (horasNormais * COST_PER_HOUR) + (horasExtras * COST_PER_OVERTIME_HOUR) ], backgroundColor: '#34d399' }
+                            ]
+                        },
+                        options: {
+                            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } },
+                            plugins: { legend: { position: 'bottom' } }
+                        }
+                    });
                 }
 
                 UIDashboard.renderCalendar(compras, rdoData?.reports || []);
@@ -546,15 +704,19 @@ export const UIDashboard = {
         if (!tbody) return;
         const sorted = Array.from(ccMap.entries()).sort((a, b) => b[1] - a[1]);
         const total = sorted.reduce((acc, [, v]) => acc + v, 0);
-        tbody.innerHTML = sorted.map(([name, val]) => `
+        tbody.innerHTML = sorted.map(([name, val]) => {
+            const perc = total > 0 ? (val / total) * 100 : 0;
+            return `
             <tr>
                 <td class="px-3 py-2 text-xs text-gray-700">${Utils.escapeHtml(name)}</td>
                 <td class="px-3 py-2 text-xs font-semibold text-gray-900">${Utils.formatCurrency(val)}</td>
-            </tr>
-        `).join('') + `
+                <td class="px-3 py-2 text-xs text-gray-700">${perc.toFixed(1)}%</td>
+            </tr>`;
+        }).join('') + `
             <tr class="bg-gray-50 font-semibold">
                 <td class="px-3 py-2 text-xs text-gray-700">Total</td>
                 <td class="px-3 py-2 text-xs text-gray-900">${Utils.formatCurrency(total)}</td>
+                <td class="px-3 py-2 text-xs text-gray-700">100%</td>
             </tr>
         `;
     },
@@ -619,7 +781,7 @@ export const UIDashboard = {
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${Utils.escapeHtml(comprador)}</td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${Utils.escapeHtml(centro)}</td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-center space-x-2">
-                    <button data-action="view-compra" data-id="${c.id}" class="btn-secondary btn-small">Ver</button>
+                    <button data-action="view-compra" data-id="${c.id}" class="btn-secondary btn-small" title="Visualizar">${VIEW_ICON}</button>
                     <button data-action="edit-compra" data-id="${c.id}" class="btn-secondary btn-small">Editar</button>
                 </td>
             </tr>`;
