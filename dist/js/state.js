@@ -3,6 +3,7 @@ export const state = {
     currentPage: 'dashboard-geral',
     previousPage: null,
     currentObraId: null,
+    currentContext: '*', // '*' = todas as obras
     currentUser: null, // Armazenará { uid, email, nome, role }
     cache: {
         obras: [],
@@ -18,5 +19,8 @@ export const state = {
         compradores: null
     },
     currentOrcamentoResumo: null,
-    reportSort: { col: 'emissao', dir: 'desc' }
+    reportSort: { col: 'emissao', dir: 'desc' },
+    dashboardSort: { col: 'data_recebimento', dir: 'asc' },
+    reportCompras: [],
+    dashboardAlertCount: 0
 };

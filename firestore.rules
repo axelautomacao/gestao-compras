@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // MODO DE DESENVOLVIMENTO (TEMPORÁRIO)
+    // ============================================
+    // ATENÇÃO: Para produção, comente este bloco e descomente as regras abaixo
+    // Este modo permite acesso completo para facilitar o desenvolvimento
+    
+    match /{document=**} {
+      allow read, write: if true;  // TEMPORÁRIO - APENAS PARA DESENVOLVIMENTO
+    }
+    
+    // ============================================
+    // MODO DE PRODUÇÃO
+    // ============================================
+    // Descomente as regras abaixo quando o app estiver pronto para produção
+    // e comente o bloco de desenvolvimento acima
+    
+    /*
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    // Helper function to get the user's role from the 'usuarios' collection
+    function getUserRole() {
+      let userPath = /databases/$(database)/documents/usuarios/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data.role : 'guest';
+    }
+
+    // Helper function to check if the user has one of the required roles
+    function roleIn(roles) {
+      return isAuthenticated() && 
+        (getUserRole() == 'administrador' || getUserRole() in roles);
+    }
+
+    // Obras
+    match /obras/{obraId} {
+      allow read: if isAuthenticated();
+      allow create, update: if roleIn(['diretor']);
+      allow delete: if roleIn(['diretor']);
+    }
+
+    // Cadastros auxiliares
+    match /compradores/{id} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if roleIn(['diretor']);
+    }
+
+    match /fornecedores/{id} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if roleIn(['diretor']);
+    }
+
+    match /centrosCusto/{id} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if roleIn(['diretor']);
+    }
+
+    // Compras
+    match /compras/{id} {
+      allow read: if isAuthenticated();
+      allow create, update: if roleIn(['diretor', 'comprador']);
+      allow delete: if roleIn(['diretor']);
+    }
+
+    // Usuários (perfil)
+    match /usuarios/{uid} {
+      // Allow users to read and write their own profile
+      // Allow directors to manage other users
+      allow read: if isAuthenticated();
+      allow create, update: if request.auth.uid == uid || roleIn(['diretor']);
+      allow delete: if roleIn(['diretor']);
+    }
+
+    // Logs de auditoria
+    match /logs/{id} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if false;
+    }
+
+    // Default: deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    */
+  }
+}

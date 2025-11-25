@@ -1,4 +1,4 @@
-// js/auth.js
+﻿// js/auth.js
 import { auth, db, doc, getDoc, setDoc, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, sendEmailVerification, Timestamp } from './firebase-config.js';
 import { state } from './state.js';
 // import { UI } from './ui.js'; // <-- REMOVIDO!
@@ -16,13 +16,24 @@ export const Auth = {
     init: (changeHandler) => {
         return new Promise((resolve, reject) => {
             let resolved = false;
+            const timeoutId = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    console.warn('[Auth.init] Timeout ao aguardar onAuthStateChanged; prosseguindo sem usuário.');
+                    resolve(null);
+                    if (typeof changeHandler === 'function') {
+                        changeHandler(null);
+                    }
+                }
+            }, 10000);
             // 'unsubscribe' pode ser usado para parar de ouvir, se necessário
             const unsubscribe = onAuthStateChanged(auth, async (user) => {
                 const loadingMessage = document.getElementById('loading-message');
 
                 if (user) {
+                    clearTimeout(timeoutId);
                     loadingMessage.textContent = 'Carregando perfil...';
-                    const userProfile = await Auth.getUserProfile(user.uid);
+                    const userProfile = await Auth.getUserProfile(user);
 
                     if (userProfile) {
                         state.currentUser = userProfile;
@@ -45,6 +56,7 @@ export const Auth = {
                         }
                     }
                 } else {
+                    clearTimeout(timeoutId);
                     // Usuário está deslogado
                     state.currentUser = null;
                     if (!resolved) {
@@ -60,26 +72,26 @@ export const Auth = {
                 reject(error);
             });
         });
-    },
-
-    getUserProfile: async (uid) => {
+    }, getUserProfile: async (user) => {
         try {
+            const uid = user.uid;
             const userDoc = await getDoc(doc(db, "usuarios", uid));
             if (userDoc.exists()) {
                 return { uid, ...userDoc.data() };
-            } else {
-                return null; // Perfil não existe
             }
+            // Perfil não existe ou sem permissão: usa fallback mínimo
+            return { uid, email: user.email, nome: user.email || 'Usuário', role: 'obra' };
         } catch (err) {
             console.error("Erro ao buscar perfil:", err);
-            return null;
+            // Fallback mínimo para não travar login
+            return { uid: user.uid, email: user.email, nome: user.email || 'Usuário', role: 'obra' };
         }
     },
 
     handleLogin: async (email, password) => {
         // A lógica de try/catch foi movida para app.js
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        
+
         // Lógica do "Lembrar-me"
         const rememberCheck = document.getElementById('check-remember-me');
         if (rememberCheck && rememberCheck.checked) {
@@ -87,7 +99,7 @@ export const Auth = {
         } else {
             localStorage.removeItem('rememberedEmail');
         }
-        
+
         // UI.hideLoginModal(); // <-- REMOVIDO!
         await logAuditoria('login', { email }, { uid: userCredential.user.uid, email });
         // Sucesso! (onAuthStateChanged fará o resto)
@@ -97,7 +109,7 @@ export const Auth = {
         // A lógica de try/catch foi movida para app.js
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const uid = userCredential.user.uid;
-        
+
         // M3.3: Enviar email de verificação
         try {
             await sendEmailVerification(userCredential.user);
@@ -106,7 +118,7 @@ export const Auth = {
             console.warn('[M3.3] Aviso ao enviar email de verificação:', err.message);
             // Continua mesmo se email não for enviado
         }
-        
+
         // Cria o perfil no Firestore com flag de não verificado
         const userProfile = {
             uid: uid,
@@ -117,7 +129,7 @@ export const Auth = {
             createdAt: Timestamp.now() // Timestamp de criação
         };
         await setDoc(doc(db, "usuarios", uid), userProfile);
-        
+
         // UI.hideLoginModal(); // <-- REMOVIDO!
         await logAuditoria('signup', { email }, userProfile);
         // Sucesso! (onAuthStateChanged fará o resto)
@@ -138,3 +150,5 @@ export const Auth = {
         // Sucesso! O app.js mostrará a mensagem
     }
 };
+
+

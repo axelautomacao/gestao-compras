@@ -17,7 +17,7 @@ const listeners = {
 };
 
 export const Data = {
-    // --- FunÃ§Ãµes de Leitura e 'Ouvintes' (Listeners) ---
+    // --- Funções de Leitura e 'Ouvintes' (Listeners) ---
 
     getDocById: async (collectionName, id) => {
         const docRef = doc(db, collectionName, id);
@@ -48,18 +48,34 @@ export const Data = {
                 CacheManager.set(cacheKey, data);
                 
                 callback();
-            }, (err) => console.error(`Erro ao ouvir ${collectionName}:`, err));
+            }, (err) => {
+                console.error(`Erro ao ouvir ${collectionName}:`, err);
+                // Usa cache se existir para não quebrar UI
+                const fallback = CacheManager.get(cacheKey);
+                if (fallback) {
+                    state.cache[cacheKey] = fallback;
+                    callback();
+                }
+            });
         };
 
-        // As funÃ§Ãµes de UI agora sÃ£o passadas como callbacks
+        // As funções de UI agora são passadas como callbacks
         listen('obras', 'obras', () => {
             uiRefreshCallbacks.renderObrasPage();
             uiRefreshCallbacks.updateDashboardObraList();
             uiRefreshCallbacks.updateRegistroObraList();
+            uiRefreshCallbacks.populateContextSelector?.();
+            uiRefreshCallbacks.renderRelatorioComprasPage?.();
         });
         listen('centrosCusto', 'centrosCusto', uiRefreshCallbacks.refreshCadastroLists);
-        listen('fornecedores', 'fornecedores', uiRefreshCallbacks.refreshCadastroLists);
-        listen('compradores', 'compradores', uiRefreshCallbacks.refreshCadastroLists);
+        listen('fornecedores', 'fornecedores', () => { 
+            uiRefreshCallbacks.refreshCadastroLists(); 
+            uiRefreshCallbacks.renderRelatorioComprasPage?.();
+        });
+        listen('compradores', 'compradores', () => { 
+            uiRefreshCallbacks.refreshCadastroLists(); 
+            uiRefreshCallbacks.renderRelatorioComprasPage?.();
+        });
     },
 
     listenToCompras: (obraId, callback) => {
@@ -78,15 +94,15 @@ export const Data = {
         
         const obras = obrasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const compras = comprasSnapshot.docs.map(doc => doc.data());
-
         const data = {
-            kpis: { obrasAtivas: 0, orcamentoTotal: 0, comprometidoTotal: 0, percentMedioUso: 0 },
+            kpis: { obrasAtivas: 0, orcamentoTotal: 0, comprometidoTotal: 0, percentMedioUso: 0, economiaTotal: 0, slaPontualidade: 0, leadTimeMedio: 0, atrasos: 0 },
             obrasChart: { labels: [], data: [] },
             naturezaChart: { labels: ['Mat. Inicial', 'Mat. Adicional', 'Desperdício'], data: [0, 0, 0] },
             mesesChart: { labels: [], data: [], map: new Map() }
         };
 
         const gastosPorObra = new Map();
+        let onTime = 0, deliveries = 0, leadSum = 0, leadCount = 0;
         compras.forEach(c => {
             const gasto = gastosPorObra.get(c.obraId) || 0;
             gastosPorObra.set(c.obraId, gasto + c.valor_total);
@@ -95,6 +111,30 @@ export const Data = {
             if (c.natureza_compra === 'Lista de Material inicial') data.naturezaChart.data[0] += c.valor_total;
             else if (c.natureza_compra === 'Material Adicional') data.naturezaChart.data[1] += c.valor_total;
             else if (c.natureza_compra === 'Desperdício') data.naturezaChart.data[2] += c.valor_total;
+
+            // SLA e lead time
+            if (c.data_recebimento && c.previsao_entrega) {
+                deliveries++;
+                const prev = new Date(c.previsao_entrega + 'T12:00:00');
+                const recv = new Date(c.data_recebimento + 'T12:00:00');
+                if (recv <= prev) onTime++;
+            }
+            if (c.data_emissao) {
+                const endDate = c.data_recebimento || c.previsao_entrega;
+                if (endDate) {
+                    const start = new Date(c.data_emissao + 'T12:00:00');
+                    const end = new Date(endDate + 'T12:00:00');
+                    const diff = Math.max(0, (end - start) / (1000 * 60 * 60 * 24));
+                    leadSum += diff;
+                    leadCount++;
+                }
+            }
+            // atrasos
+            if (c.status_compra !== 'Recebido' && c.previsao_entrega) {
+                const hoje = new Date(); hoje.setHours(0,0,0,0);
+                const prev = new Date(c.previsao_entrega + 'T12:00:00');
+                if (prev < hoje) data.kpis.atrasos++;
+            }
             
             if (c.data_emissao) {
                 const mesKey = c.data_emissao.substring(0, 7); // "YYYY-MM"
@@ -114,7 +154,10 @@ export const Data = {
 
         if (data.kpis.orcamentoTotal > 0) {
             data.kpis.percentMedioUso = (data.kpis.comprometidoTotal / data.kpis.orcamentoTotal) * 100;
+            data.kpis.economiaTotal = Math.max(0, data.kpis.orcamentoTotal - data.kpis.comprometidoTotal);
         }
+        if (deliveries > 0) data.kpis.slaPontualidade = (onTime / deliveries) * 100;
+        if (leadCount > 0) data.kpis.leadTimeMedio = leadSum / leadCount;
 
         const mesesOrdenados = Array.from(data.mesesChart.map.keys()).sort();
         data.mesesChart.labels = mesesOrdenados;
@@ -125,7 +168,7 @@ export const Data = {
 
     getResumoOrcamento: async (obraId, compraIdParaExcluir = null) => {
         const obraDoc = await getDoc(doc(db, "obras", obraId));
-        if (!obraDoc.exists()) throw new Error("Obra nÃ£o encontrada.");
+        if (!obraDoc.exists()) throw new Error("Obra não encontrada.");
         
         const obra = obraDoc.data();
         const orcado = obra.valor_orcado || 0;
@@ -143,14 +186,14 @@ export const Data = {
             if (doc.id === compraIdParaExcluir) return; 
             
             const compra = doc.data();
-            // âœ… M4.5: Apenas conta se foi aprovado (ou nÃ£o tem estouro)
+            // ✅ M4.5: Apenas conta se foi aprovado (ou não tem estouro)
             const deveContar = 
                 (compra.status_compra === 'Comprado' || compra.status_compra === 'Recebido')
                 && (compra.status_aprovacao === 'Aprovado' || !compra.estouro_orcamento);
             
             if (deveContar) {
                 comprometido += compra.valor_total || 0;
-            } else if (compra.status_compra === 'Em cotaÃ§Ã£o') {
+            } else if (compra.status_compra === 'Em cotação') {
                 em_cotacao += compra.valor_total || 0;
             }
         });
@@ -159,9 +202,11 @@ export const Data = {
     },
 
     getComprasByFornecedor: async (fornecedorId) => {
-        const q = query(collection(db, "compras"), where("fornecedorId", "==", fornecedorId), orderBy("data_emissao", "desc"));
+        const q = query(collection(db, "compras"), where("fornecedorId", "==", fornecedorId));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .sort((a, b) => (b.data_emissao || '').localeCompare(a.data_emissao || ''));
     },
     
     getPdfUrl: async (storagePath) => {
@@ -169,11 +214,12 @@ export const Data = {
         return await getDownloadURL(fileRef);
     },
 
-    // --- FunÃ§Ãµes de Escrita (Create, Update, Delete) ---
+    // --- Funções de Escrita (Create, Update, Delete) ---
 
     saveObra: async (form) => {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
+        const fotoRcFile = formData.get('foto_rc');
         data.pdf_nf = formData.get('pdf_nf');
         data.pdf_cte = formData.get('pdf_cte');
         
@@ -185,6 +231,12 @@ export const Data = {
             descricao_obra: data.descricao_obra || null,
             local_realizacao: data.local_realizacao || null,
             horas_previstas: data.horas_previstas ? parseFloat(data.horas_previstas) : null,
+            horas_extras_previstas: data.horas_extras_previstas ? parseFloat(data.horas_extras_previstas) : null,
+            valor_deslocamento_km: data.valor_deslocamento_km ? Utils.parseCurrency(data.valor_deslocamento_km) : null,
+            qtd_refeicoes: data.qtd_refeicoes ? parseInt(data.qtd_refeicoes, 10) : null,
+            qtd_hospedagens: data.qtd_hospedagens ? parseInt(data.qtd_hospedagens, 10) : null,
+            is_obra_filha: data.is_obra_filha === 'on',
+            obra_pai_os: data.is_obra_filha === 'on' ? (data.obra_pai_os || null) : null,
             data_prevista_inicio: data.data_prevista_inicio || null,
             data_prevista_fim: data.data_prevista_fim || null,
             valor_orcado: Utils.parseCurrency(data.valor_orcado),
@@ -233,30 +285,36 @@ export const Data = {
         if (!data.obraId) throw new Error("Obra obrigatoria.");
         if (!data.centroCustoId) throw new Error("Centro de Custo obrigatorio.");
         if (!data.compradorId) throw new Error("Comprador obrigatorio.");
+        if (!data.solicitante || !String(data.solicitante).trim()) throw new Error("Solicitante obrigatorio.");
+        const valor = Utils.parseCurrency(data.valor_total || 0);
+        if (!valor || valor <= 0) throw new Error("Valor total da compra obrigatório.");
         const isRetirada = data.retirada_estoque === 'on';
         const numero_nf_val = data.numero_nf ? String(data.numero_nf).trim() : '';
         if (!isRetirada && !numero_nf_val) throw new Error("Numero da NF-e obrigatorio.");
         if (!data.data_emissao) throw new Error("Data de Emissao obrigatoria.");
     },
 
-    _uploadPdf: async (file, path) => {
+    _uploadFile: async (file, path, validator) => {
         if (!file || file.size === 0) return null;
-        Utils.validatePdf(file);
+        if (validator) validator(file);
         const fileRef = ref(storage, path);
         await uploadBytes(fileRef, file);
         return path;
     },
+    
+    _uploadPdf: async (file, path) => Data._uploadFile(file, path, Utils.validatePdf),
 
     saveCompra: async (form) => {
         const formData = new FormData(form);
         const data = Object.fromEntries(formData.entries());
+        const fotoRcFile = formData.get('foto_rc');
         
         Data._validarCompra(data);
         
         const valorTotal = Utils.parseCurrency(data.valor_total);
         const descricaoCompra = (data.descricao_compra || '').trim() || null;
         
-        if (!state.currentOrcamentoResumo) throw new Error("Resumo do orÃ§amento nÃ£o carregado. Selecione a obra novamente.");
+        if (!state.currentOrcamentoResumo) throw new Error("Resumo do orçamento não carregado. Selecione a obra novamente.");
         const resumo = state.currentOrcamentoResumo;
         
         let novoComprometido = resumo.comprometido;
@@ -266,7 +324,7 @@ export const Data = {
         
         const estouro = novoComprometido > resumo.limite_real;
         if (estouro && !data.justificativa_estouro_orcamento) {
-            // LanÃ§a um erro especial para o app.js tratar
+            // Lança um erro especial para o app.js tratar
             throw new Error("JUSTIFICATIVA_NECESSARIA");
         }
         
@@ -276,6 +334,9 @@ export const Data = {
 
         const nfPath = (data.pdf_nf && data.pdf_nf.size) ? await Data._uploadPdf(data.pdf_nf, `compras/${numero_nf_trim || Date.now()}_${data.obraId}_NF.pdf`) : null;
         const ctePath = (data.pdf_cte && data.pdf_cte.size) ? await Data._uploadPdf(data.pdf_cte, `compras/${numero_nf_trim || Date.now()}_${data.obraId}_CTE.pdf`) : null;
+        const rcPath = (data.retirada_estoque === 'on' && fotoRcFile && fotoRcFile.size)
+            ? await Data._uploadFile(fotoRcFile, `compras/${numero_nf_trim || Date.now()}_${data.obraId}_RC${Utils.getFileExtension(fotoRcFile.name) || '.jpg'}`, Utils.validateImage)
+            : null;
 
         const dadosCompra = {
             obraId: data.obraId,
@@ -293,6 +354,7 @@ export const Data = {
             data_recebimento: data.data_recebimento || null,
             pdf_nf_path: nfPath,
             pdf_cte_path: ctePath,
+            foto_rc_path: rcPath,
             criado_em: Timestamp.now(),
             criado_por: state.currentUser.email,
             estouro_orcamento: estouro,
@@ -326,6 +388,12 @@ export const Data = {
             descricao_obra: data.descricao_obra || null,
             local_realizacao: data.local_realizacao || null,
             horas_previstas: data.horas_previstas ? parseFloat(data.horas_previstas) : null,
+            horas_extras_previstas: data.horas_extras_previstas ? parseFloat(data.horas_extras_previstas) : null,
+            valor_deslocamento_km: data.valor_deslocamento_km ? Utils.parseCurrency(data.valor_deslocamento_km) : null,
+            qtd_refeicoes: data.qtd_refeicoes ? parseInt(data.qtd_refeicoes, 10) : null,
+            qtd_hospedagens: data.qtd_hospedagens ? parseInt(data.qtd_hospedagens, 10) : null,
+            is_obra_filha: data.is_obra_filha === 'on',
+            obra_pai_os: data.is_obra_filha === 'on' ? (data.obra_pai_os || null) : null,
             data_prevista_inicio: data.data_prevista_inicio || null,
             data_prevista_fim: data.data_prevista_fim || null
         };
@@ -341,12 +409,12 @@ export const Data = {
     },
 
     deleteObra: async (obraId) => {
-        // A lÃ³gica de confirmaÃ§Ã£o foi movida para app.js
+        // A lógica de confirmação foi movida para app.js
         // try {
             const q = query(collection(db, "compras"), where("obraId", "==", obraId));
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
-                // âœ… M4.4: Delete associated PDFs before throwing error
+                // ✅ M4.4: Delete associated PDFs before throwing error
                 for (const compraDoc of snapshot.docs) {
                     const compra = compraDoc.data();
                     if (compra.pdf_nf_path) {
@@ -363,9 +431,16 @@ export const Data = {
                             console.warn("Erro ao deletar CTE PDF:", e);
                         }
                     }
+                    if (compra.foto_rc_path) {
+                        try {
+                            await deleteObject(ref(storage, compra.foto_rc_path));
+                        } catch (e) {
+                            console.warn("Erro ao deletar foto RC:", e);
+                        }
+                    }
                 }
                 
-                throw new Error(`NÃ£o Ã© possÃ­vel excluir. Existem ${snapshot.size} compras vinculadas a esta obra.`);
+                throw new Error(`Não é possível excluir. Existem ${snapshot.size} compras vinculadas a esta obra.`);
             }
             
             const obra = state.cache.obras.find(o => o.id === obraId);
@@ -379,11 +454,11 @@ export const Data = {
         const id = data.id;
         const descricaoCompra = (data.descricao_compra || '').trim() || null;
         
-        // try { // <-- Removido, o app.js farÃ¡ o try/catch
+        // try { // <-- Removido, o app.js fará o try/catch
             Data._validarCompra(data);
 
             if (!state.currentOrcamentoResumo) {
-                throw new Error("Resumo do orÃ§amento nÃ£o foi carregado. Tente reabrir o modal.");
+                throw new Error("Resumo do orçamento não foi carregado. Tente reabrir o modal.");
             }
             const resumo = state.currentOrcamentoResumo;
             const valorCompra = Utils.parseCurrency(data.valor_total);
@@ -425,7 +500,7 @@ export const Data = {
 
             if (novoComprometido > resumo.limite_real) {
                 if (!dadosUpdate.justificativa_estouro_orcamento) {
-                    // LanÃ§a um erro especial para o app.js tratar
+                    // Lança um erro especial para o app.js tratar
                     throw new Error("JUSTIFICATIVA_NECESSARIA");
                 }
                 dadosUpdate.estouro_orcamento = true;
@@ -439,13 +514,14 @@ export const Data = {
     },
     
     deleteCompra: async (compraId) => {
-        // A lÃ³gica de confirmaÃ§Ã£o foi movida para app.js
+        // A lógica de confirmação foi movida para app.js
         // try {
             const compra = await Data.getDocById("compras", compraId);
-            if (!compra) throw new Error("Compra nÃ£o encontrada para exclusÃ£o.");
+            if (!compra) throw new Error("Compra não encontrada para exclusão.");
             
             if (compra.pdf_nf_path) await deleteObject(ref(storage, compra.pdf_nf_path));
             if (compra.pdf_cte_path) await deleteObject(ref(storage, compra.pdf_cte_path));
+            if (compra.foto_rc_path) await deleteObject(ref(storage, compra.foto_rc_path));
             
             await deleteDoc(doc(db, "compras", compraId));
             await logAuditoria('delete', { colecao: 'compras', id: compraId, numero_nf: compra.numero_nf, obraId: compra.obraId }, state.currentUser);
@@ -458,18 +534,20 @@ export const Data = {
         delete data.id;
         
         if (data.cnpj) data.cnpj = data.cnpj.replace(/\D/g, '');
-        
+        if (data.numero_nf === '' || data.numero_nf === undefined || data.numero_nf === null) {
+            data.numero_nf = null;
+        }
         await updateDoc(doc(db, collectionName, id), data);
         await logAuditoria('update', { colecao: collectionName, id: id, ...data }, state.currentUser);
     },
     
     deleteGeneric: async (id, collectionName, checkCollection, checkField) => {
-        // A lÃ³gica de confirmaÃ§Ã£o foi movida para app.js
+        // A lógica de confirmação foi movida para app.js
         // try {
             const q = query(collection(db, checkCollection), where(checkField, "==", id));
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
-                throw new Error(`NÃ£o Ã© possÃ­vel excluir. Existem ${snapshot.size} compras vinculadas a este item.`);
+                throw new Error(`Não é possível excluir. Existem ${snapshot.size} compras vinculadas a este item.`);
             }
             
             const item = state.cache[collectionName].find(i => i.id === id);
@@ -477,69 +555,37 @@ export const Data = {
             await logAuditoria('delete', { colecao: collectionName, id: id, nome: item.nome }, state.currentUser);
     },
 
-    // Busca Compras para RelatÃ³rio
+    // Busca Compras para Relatório
     findCompras: async (filters) => {
-        // A lÃ³gica de UI foi movida para app.js e ui.js
-        
         const sortMap = { 'obra': 'obraId', 'nf': 'numero_nf', 'status': 'status_compra', 'recebimento': 'data_recebimento', 'emissao': 'data_emissao', 'comprador': 'compradorId', 'valor': 'valor_total' };
-        
-        let constraints = [];
-        
         const { dateStart, dateEnd, status, natureza, obras, fornecedores, compradores, searchText, sortCol, sortDir } = filters;
-        
+        const constraints = [];
+
         if (dateStart) constraints.push(where("data_emissao", ">=", dateStart));
         if (dateEnd) constraints.push(where("data_emissao", "<=", dateEnd));
         if (status && status !== 'Atrasado') constraints.push(where("status_compra", "==", status));
         if (natureza) constraints.push(where("natureza_compra", "==", natureza));
-        
-        let hasInFilter = false;
+
+        const q = query(collection(db, "compras"), ...constraints);
+        const snapshot = await getDocs(q);
+        let compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
         if (obras.length > 0) {
-            constraints.push(where('obraId', 'in', obras));
-            hasInFilter = true;
-        } else if (fornecedores.length > 0) {
-            constraints.push(where('fornecedorId', 'in', fornecedores));
-            hasInFilter = true;
-        } else if (compradores.length > 0) {
-            constraints.push(where('compradorId', 'in', compradores));
-            hasInFilter = true;
+            compras = compras.filter(c => obras.includes(c.obraId));
         }
-        
-        constraints.push(orderBy(sortMap[sortCol], sortDir));
-
-        let compras = [];
-        try {
-            const q = query(collection(db, "compras"), ...constraints);
-            const snapshot = await getDocs(q);
-            compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        } catch (err) {
-            if (err.code === 'failed-precondition' && hasInFilter) {
-                // Tenta a busca sem o filtro 'in' e filtra no lado do cliente
-                let baseConstraints = [];
-                if (dateStart) baseConstraints.push(where("data_emissao", ">=", dateStart));
-                if (dateEnd) baseConstraints.push(where("data_emissao", "<=", dateEnd));
-                if (status && status !== 'Atrasado') baseConstraints.push(where("status_compra", "==", status));
-                if (natureza) baseConstraints.push(where("natureza_compra", "==", natureza));
-                baseConstraints.push(orderBy(sortMap[sortCol], sortDir));
-
-                const qBase = query(collection(db, "compras"), ...baseConstraints);
-                const snapshot = await getDocs(qBase);
-                compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                if (obras.length > 0) compras = compras.filter(c => obras.includes(c.obraId));
-                if (fornecedores.length > 0) compras = compras.filter(c => fornecedores.includes(c.fornecedorId));
-                if (compradores.length > 0) compras = compras.filter(c => compradores.includes(c.compradorId));
-                
-            } else {
-                throw new Error(`Erro na busca: ${err.message}`);
-            }
+        if (fornecedores.length > 0) {
+            compras = compras.filter(c => fornecedores.includes(c.fornecedorId));
         }
-        
+        if (compradores.length > 0) {
+            compras = compras.filter(c => compradores.includes(c.compradorId));
+        }
+
         if (searchText) {
-            const fornMap = new Map(state.cache.fornecedores.map(f => [f.id, f.nome.toLowerCase()]));
+            const term = searchText.toLowerCase();
+            const fornMap = new Map(state.cache.fornecedores.map(f => [f.id, (f.nome || '').toLowerCase()]));
             compras = compras.filter(c => 
-                c.numero_nf.includes(searchText) || 
-                (fornMap.get(c.fornecedorId) || '').includes(searchText)
+                (c.numero_nf || '').toLowerCase().includes(term) || 
+                (fornMap.get(c.fornecedorId) || '').includes(term)
             );
         }
 
@@ -555,8 +601,26 @@ export const Data = {
                 return false;
             });
         }
-        
+
+        const sortField = sortMap[sortCol] || 'data_emissao';
+        const direction = sortDir === 'asc' ? 1 : -1;
+        compras.sort((a, b) => {
+            const av = a[sortField];
+            const bv = b[sortField];
+            if (typeof av === 'number' && typeof bv === 'number') {
+                return (av - bv) * direction;
+            }
+            const aStr = (av || '').toString();
+            const bStr = (bv || '').toString();
+            return aStr.localeCompare(bStr) * direction;
+        });
+
         return compras; // Retorna os dados puros!
+    },
+
+    updateCompraStatus: async (id, novoStatus) => {
+        await updateDoc(doc(db, "compras", id), { status_compra: novoStatus });
+        await logAuditoria('update', { colecao: 'compras', id, status_compra: novoStatus }, state.currentUser);
     },
     
         exportCSV: async () => {
@@ -643,3 +707,4 @@ export const Data = {
         return docs.slice(0, max);
     }
 };
+

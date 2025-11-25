@@ -1,4 +1,4 @@
-// js/notification-manager.js
+﻿// js/notification-manager.js
 // Gerenciador simples de notificações com fila, tipos e ações
 const $ = (id) => document.getElementById(id);
 
@@ -18,7 +18,7 @@ export const NotificationManager = (() => {
         <div class="notification pointer-events-auto p-3 rounded-lg shadow-lg text-white transition-all duration-300 bg-green-600">
             <div class="flex items-start justify-between gap-3">
                 <div class="flex gap-3 items-start flex-1">
-                    <span class="icon mt-1">🔔</span>
+                    <span class="icon mt-1">•</span>
                     <span class="message"></span>
                 </div>
                 <div class="flex-shrink-0 flex items-center gap-2">
@@ -43,7 +43,7 @@ export const NotificationManager = (() => {
             dlg.innerHTML = `<div class="p-6"><div class="flex items-center justify-between"><h3 class="text-xl font-medium">Histórico de Ações</h3><button id="btnAuditClose" class="btn-secondary">Fechar</button></div><ul id="audit-list" class="mt-4 space-y-2 max-h-96 overflow-auto"></ul></div>`;
             document.body.appendChild(dlg);
             const closeBtn = document.getElementById('btnAuditClose');
-            if (closeBtn) closeBtn.addEventListener('click', () => { try { dlg.close(); } catch (e) {} });
+            if (closeBtn) closeBtn.addEventListener('click', () => { try { dlg.close(); } catch (e) { } });
         }
     };
     ensureDom();

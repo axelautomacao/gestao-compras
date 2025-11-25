@@ -1,7 +1,7 @@
-// js/utils.js
+﻿// js/utils.js
 export const Utils = {
     formatCurrency: (value) => (parseFloat(value) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-    
+
     fmtBR: (iso) => {
         if (!iso) return 'N/D';
         const parts = iso.split('-');
@@ -9,18 +9,35 @@ export const Utils = {
         const [y, m, d] = parts;
         return `${d}/${m}/${y}`;
     },
-    
+
     escapeHtml: (s = '') => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'),
-    
+
     validatePdf: (file) => {
         const MAX_PDF_MB = 20;
-        if (!file || file.size === 0) return true; // Válido se não houver arquivo
-        if (file.type !== 'application/pdf') throw new Error('Apenas arquivos PDF são permitidos.');
+        if (!file || file.size === 0) return true;
+        const type = (file.type || '').toLowerCase();
+        const name = (file.name || '').toLowerCase();
+        const isPdf = type.includes('pdf') || name.endsWith('.pdf');
+        if (!isPdf) throw new Error('Apenas arquivos PDF são permitidos.');
         if (file.size > MAX_PDF_MB * 1024 * 1024) throw new Error(`PDF maior que ${MAX_PDF_MB}MB.`);
         return true;
     },
-    
-    renderStatusBadge: (status, previsaoEntrega) => {
+
+    validateImage: (file) => {
+        const MAX_IMG_MB = 10;
+        if (!file || file.size === 0) return true;
+        const type = (file.type || '').toLowerCase();
+        if (!type.startsWith('image/') && !type.includes('pdf')) {
+            throw new Error('Apenas imagens ou PDF são permitidos.');
+        }
+        if (file.size > MAX_IMG_MB * 1024 * 1024) throw new Error(`Arquivo maior que ${MAX_IMG_MB}MB.`);
+        return true;
+    },
+
+    getFileExtension: (name = '') => {
+        const parts = name.split('.');
+        return parts.length > 1 ? '.' + parts.pop() : '';
+    }, renderStatusBadge: (status, previsaoEntrega) => {
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
         let previsao = null;
@@ -35,11 +52,12 @@ export const Utils = {
         switch (status) {
             case 'Recebido': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-500 text-white">${status}</span>`;
             case 'Comprado': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">${status}</span>`;
+            case 'Aprovado': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-500 text-white">${status}</span>`;
             case 'Em cotação': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-500 text-gray-800">${status}</span>`;
             default: return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-400 text-gray-800">${status || 'N/D'}</span>`;
         }
     },
-    
+
     formatCurrencyInput: (value, isBlur = false) => {
         if (typeof value === 'number') value = value.toFixed(2);
         let v = value.toString().replace(/\D/g, '');
@@ -48,12 +66,12 @@ export const Utils = {
         v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
         return isBlur ? 'R$ ' + v : v;
     },
-    
+
     parseCurrency: (value) => {
         let v = value.toString().replace("R$ ", "").replace(/\./g, "").replace(",", ".");
         return parseFloat(v) || 0;
     },
-    
+
     formatCnpjInput: (value) => {
         if (!value) return '';
         let v = value.replace(/\D/g, '');
@@ -64,20 +82,20 @@ export const Utils = {
         v = v.replace(/(\d{4})(\d)/, '$1-$2');
         return v;
     },
-    
+
     // M7.1: Validação de CNPJ com check digit
     validateCNPJ: (cnpj) => {
         if (!cnpj) return true; // Campo opcional
-        
+
         // Remove caracteres não numéricos
         const cleaned = cnpj.replace(/\D/g, '');
-        
+
         // CNPJ deve ter 14 dígitos
         if (cleaned.length !== 14) return false;
-        
+
         // Todos iguais é inválido
         if (/^(\d)\1{13}$/.test(cleaned)) return false;
-        
+
         // Validar primeiro dígito
         let sum = 0;
         let mult = 5;
@@ -85,12 +103,12 @@ export const Utils = {
             sum += parseInt(cleaned[i]) * mult;
             mult = mult === 2 ? 9 : mult - 1;
         }
-        
+
         let remainder = sum % 11;
         let digit1 = remainder < 2 ? 0 : 11 - remainder;
-        
+
         if (parseInt(cleaned[8]) !== digit1) return false;
-        
+
         // Validar segundo dígito
         sum = 0;
         mult = 6;
@@ -98,13 +116,13 @@ export const Utils = {
             sum += parseInt(cleaned[i]) * mult;
             mult = mult === 2 ? 9 : mult - 1;
         }
-        
+
         remainder = sum % 11;
         let digit2 = remainder < 2 ? 0 : 11 - remainder;
-        
+
         return parseInt(cleaned[9]) === digit2;
     },
-    
+
     // M3.3: Debounce para evitar múltiplas chamadas
     debounce: (func, delay) => {
         let timeoutId;

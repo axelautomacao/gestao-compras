@@ -1,4 +1,4 @@
-// js/auth-middleware.js
+﻿// js/auth-middleware.js
 import { state } from './state.js';
 
 /**
@@ -15,19 +15,19 @@ export const AuthMiddleware = {
 
     // Verificar permissão específica para editar obras
     canEditObra: () => AuthMiddleware.hasRole(['diretor', 'comprador', 'obra']),
-    
+
     // Verificar permissão específica para deletar obras
     canDeleteObra: () => AuthMiddleware.hasRole(['diretor']),
-    
+
     // Verificar permissão específica para editar compras
     canEditCompra: () => AuthMiddleware.hasRole(['diretor', 'comprador']),
-    
+
     // Verificar permissão específica para aprovar compras
     canApproveCompra: () => AuthMiddleware.hasRole(['diretor', 'financeiro']),
-    
+
     // Verificar permissão específica para editar cadastros (fornecedores, compradores, centros de custo)
     canEditCadastros: () => AuthMiddleware.hasRole(['diretor']),
-    
+
     // Verificar permissão específica para deletar cadastros
     canDeleteCadastros: () => AuthMiddleware.hasRole(['diretor']),
 
@@ -41,4 +41,3 @@ export const AuthMiddleware = {
         return action();
     }
 };
-

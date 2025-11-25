@@ -5,55 +5,93 @@ import { Data } from './data.js';
 import { UI } from './ui.js';
 import { Utils } from './utils.js';
 import { AuthMiddleware } from './auth-middleware.js';
+import { UIReports } from './ui-reports.js';
+import { UIForms } from './ui-forms.js';
 
 // --- Mapeamento de DOM ---
 const $ = (id) => document.getElementById(id);
 
 // O Objeto App é o controlador principal
 const App = {
-    // init AGORA É ASSÍNCRONO
+    // init agora é assíncrono
     init: async () => {
+        const timeoutMs = 7000;
+        let timedOut = false;
+        let initCompleted = false;
+        const showInitError = (msg) => App.showInitError(msg || 'Não foi possível iniciar. Verifique a conexão ou configuração e tente novamente.');
+        const finishInit = (userProfile) => {
+            if (initCompleted) return;
+            initCompleted = true;
+            const overlay = $('loading-overlay');
+            if (overlay) overlay.style.display = 'none';
+            if (userProfile) {
+                App.initializeApp_PostLogin(userProfile);
+            } else {
+                App.cleanupOnSignOut();
+                UI.updateUIForRole();
+                UI.showLoginModal('login');
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            timedOut = true;
+            showInitError('Não foi possível conectar ao Firebase a tempo. Verifique sua conexão ou configuração e tente novamente.');
+        }, timeoutMs);
+
         try {
             // Registra plugins do Chart.js
             if (window.ChartDataLabels) {
                 Chart.register(ChartDataLabels);
                 Chart.defaults.plugins.datalabels.display = false;
             }
-            
+
             // Inicia o tema (Claro/Escuro)
-            UI.initTheme(); 
-            
-            // Liga os botões de Login/Cadastro PRIMEIRO
-            App.bindAuthEvents(); 
-            
-            // Espera a autenticação resolver. Também passamos um changeHandler
-            // para reagir a mudanças de auth depois da inicialização.
-            const userProfile = await Auth.init((userProfile) => {
-                if (userProfile) {
-                    App.initializeApp_PostLogin(userProfile);
-                } else {
-                    App.cleanupOnSignOut();
-                    UI.updateUIForRole(); // limpa a UI
-                    $('loading-overlay').style.display = 'none';
-                    UI.showLoginModal('login');
-                }
+            UI.initTheme();
+
+            // Liga os botões de Login/Cadastro primeiro
+            App.bindAuthEvents();
+
+            // Espera a autenticação resolver
+            const userProfile = await Auth.init((currentProfile) => {
+                if (timedOut) return;
+                clearTimeout(timeoutId);
+                finishInit(currentProfile);
             });
 
-            if (userProfile) {
-                // ****** USUÁRIO ESTÁ LOGADO ******
-                // userProfile já está no 'state' graças ao Auth.init()
-                App.initializeApp_PostLogin(userProfile);
-            } else {
-                // ****** USUÁRIO ESTÁ DESLOGADO ******
-                UI.updateUIForRole(); // Garante que a UI está limpa (sem usuário)
-                $('loading-overlay').style.display = 'none'; // Esconde o loading
-                UI.showLoginModal('login'); // Mostra o modal de login
+            if (!timedOut) {
+                clearTimeout(timeoutId);
+                finishInit(userProfile);
             }
-
         } catch (err) {
-            console.error("Erro na inicialização:", err);
-            $('loading-message').textContent = `Erro crítico: ${err.message}`;
-            $('loading-message').classList.add('text-red-500');
+            console.error('Erro na inicialização:', err);
+            clearTimeout(timeoutId);
+            showInitError(`Erro crítico: ${err.message}`);
+        }
+    },
+
+    showInitError: (message) => {
+        const overlay = $('loading-overlay');
+        if (overlay) {
+            overlay.style.display = 'flex';
+            overlay.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full text-center space-y-4">
+                    <h3 class="text-lg font-semibold text-red-600">Falha ao iniciar</h3>
+                    <p class="text-sm text-gray-700">${message}</p>
+                    <div class="flex justify-center gap-3">
+                        <button id="btn-retry-init" class="btn">Tentar Novamente</button>
+                        <button id="btn-exit-init" class="btn-secondary">Sair</button>
+                    </div>
+                </div>`;
+            const retry = document.getElementById('btn-retry-init');
+            const exitBtn = document.getElementById('btn-exit-init');
+            retry?.addEventListener('click', () => window.location.reload());
+            exitBtn?.addEventListener('click', () => {
+                try { localStorage.clear(); sessionStorage.clear(); } catch (e) { /* ignore */ }
+                try { Auth.handleSignOut?.(); } catch (e) { /* ignore */ }
+                window.location.reload();
+            });
+        } else {
+            alert(message);
         }
     },
 
@@ -61,19 +99,18 @@ const App = {
     bindAuthEvents: () => {
         try {
             // --- LOGIN ---
-            $('form-login').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
+            $('form-login').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true, 'Entrando...');
                 const errorDiv = $('login-error');
-                errorDiv.classList.add('hidden'); 
+                errorDiv.classList.add('hidden');
                 const form = e.target;
-                
+
                 try {
-                    await Auth.handleLogin(form.email.value, form.password.value); 
-                    // Sucesso! O onAuthStateChanged vai disparar, recarregar o app
-                    // e o Auth.init() vai resolver com o perfil.
+                    await Auth.handleLogin(form.email.value, form.password.value);
                     UI.hideLoginModal();
                 } catch (err) {
-                    // O app.js agora trata o erro de UI (mensagem amigável PT-BR)
                     console.error('Login error:', err);
                     let msg = 'Não foi possível entrar. Verifique suas credenciais e tente novamente.';
                     if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' || err.code === 'auth/invalid-email') {
@@ -85,31 +122,36 @@ const App = {
                     }
                     errorDiv.textContent = msg;
                     errorDiv.classList.remove('hidden');
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            
+
             // --- CADASTRO (SIGNUP) ---
-            $('form-signup').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
+            $('form-signup').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true, 'Cadastrando...');
                 const errorDiv = $('signup-error');
-                errorDiv.classList.add('hidden'); 
-                
+                errorDiv.classList.add('hidden');
+
                 try {
                     await Auth.handleSignUp(e.target.nome.value, e.target.email.value, e.target.password.value);
-                    // Sucesso! onAuthStateChanged vai disparar.
                     UI.hideLoginModal();
                 } catch (err) {
-                    // O app.js agora trata o erro de UI
                     errorDiv.textContent = `Erro: ${err.message}`;
                     errorDiv.classList.remove('hidden');
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            
+
             // --- LOGOUT ---
             $('btn-logout').addEventListener('click', async () => {
                 await Auth.handleSignOut();
-                // onAuthStateChanged vai disparar, o Auth.init() vai resolver como 'null'
-                // e o app.js vai mostrar o modal de login.
+                App.cleanupOnSignOut();
+                UI.showLoginModal('login');
+                window.location.reload();
             });
 
             // --- ESQUECI A SENHA ---
@@ -117,6 +159,8 @@ const App = {
             $('btn-show-login-from-forgot').addEventListener('click', () => UI.showLoginModal('login'));
             $('form-forgot-password').addEventListener('submit', async (e) => {
                 e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true, 'Enviando...');
                 const successMsg = $('forgot-success');
                 const errorMsg = $('forgot-error');
                 successMsg.classList.add('hidden');
@@ -124,54 +168,55 @@ const App = {
 
                 try {
                     await Auth.handleForgotPassword(e.target.email.value);
-                    // O app.js agora trata o sucesso da UI
                     successMsg.textContent = 'Link de redefinição enviado para o seu email!';
                     successMsg.classList.remove('hidden');
                 } catch (err) {
-                    // O app.js agora trata o erro da UI
                     if (err.code === 'auth/user-not-found') {
                         errorMsg.textContent = 'Email não encontrado no nosso sistema.';
                     } else {
                         errorMsg.textContent = `Erro: ${err.message}`;
                     }
                     errorMsg.classList.remove('hidden');
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
 
-            // --- BOTÕES DE NAVEGAÇÃO DO MODAL ---
             $('btn-show-signup').addEventListener('click', () => UI.showLoginModal('signup'));
             $('btn-show-login').addEventListener('click', () => UI.showLoginModal('login'));
 
         } catch (err) {
-             console.error("Erro crítico ao ligar eventos de autenticação:", err); 
-             $('loading-message').textContent = `Erro crítico (bindAuthEvents): ${err.message}`;
+            console.error("Erro crítico ao ligar eventos de autenticação:", err);
+            $('loading-message').textContent = `Erro crítico (bindAuthEvents): ${err.message}`;
         }
     },
-    
-    // Esta função agora recebe o perfil do usuário
+
     initializeApp_PostLogin: (userProfile) => {
-        UI.updateUIForRole(); // Atualiza a UI com o perfil
-        App.bindGlobalEvents(); // Liga o resto dos botões
-        
-        // Passa os callbacks de UI para o listener de dados
+        UI.updateUIForRole();
+        App.bindGlobalEvents();
+
         Data.listenToCadastros({
             renderObrasPage: UI.renderObrasPage,
             updateDashboardObraList: UI.updateDashboardObraList,
             updateRegistroObraList: UI.updateRegistroObraList,
-            refreshCadastroLists: UI.refreshCadastroLists
+            refreshCadastroLists: UI.refreshCadastroLists,
+            populateContextSelector: UI.populateContextSelector,
+            renderRelatorioComprasPage: UI.renderRelatorioComprasPage
         });
-        
-        // Define a página inicial com base no perfil
-        const defaultPage = (userProfile.role === 'diretor' || userProfile.role === 'financeiro') ? 'dashboard-geral' : 'dashboard';
-        UI.showPage(defaultPage);
-        
-        $('loading-overlay').style.display = 'none'; // Esconde o loading
+
+        try {
+            UI.applyContextSelection(state.currentContext || '*');
+        } catch (err) {
+            console.warn('Falha ao aplicar contexto, caindo para dashboard padrão:', err);
+            UI.showPage('dashboard');
+            UI.renderDashboardStats(state.currentObraId);
+        }
+
+        $('loading-overlay').style.display = 'none';
     },
-    
-    // Limpa listeners e caches ao fazer logout para evitar vazamentos
+
     cleanupOnSignOut: () => {
         try {
-            // Desinscreve todos os listeners armazenados em state.listeners
             Object.keys(state.listeners).forEach(key => {
                 const fn = state.listeners[key];
                 if (typeof fn === 'function') {
@@ -180,36 +225,70 @@ const App = {
                 }
             });
 
-            // Limpa caches para estado inicial
             state.cache.obras = [];
             state.cache.centrosCusto = [];
             state.cache.fornecedores = [];
             state.cache.compradores = [];
             state.currentObraId = null;
 
-            // Esconde a área principal (caso esteja visível)
             try { $('main-layout').classList.add('hidden'); } catch (e) { /* ignore */ }
         } catch (err) {
             console.warn('Erro durante cleanupOnSignOut:', err);
         }
     },
-    
-    // Esta função só é chamada DEPOIS do login
+
     bindGlobalEvents: () => {
-        // Navegação principal
         $('navigation').addEventListener('click', (e) => {
             const pageId = e.target.closest('button')?.dataset.page;
             if (pageId) UI.showPage(pageId);
         });
-        
-        // Listener para o Seletor de Tema
+
         try {
             $('select-theme').addEventListener('change', (e) => UI.applyTheme(e.target.value));
-        } catch(err) {
+        } catch (err) {
             console.warn("Erro ao ligar o listener do tema:", err);
         }
 
-        // Ações de clique (botões de editar, excluir, ver PDF, etc.)
+        try {
+            const contextSelect = $('context-obra-select');
+            contextSelect?.addEventListener('change', (e) => UI.applyContextSelection(e.target.value));
+            $('btn-toggle-sidebar')?.addEventListener('click', () => {
+                const sidebar = $('sidebar');
+                if (sidebar) sidebar.classList.toggle('-translate-x-full');
+            });
+            $('view-table-toggle')?.addEventListener('click', () => {
+                UIReports.toggleReportView('table');
+                if (state.reportCompras?.length) UIReports.renderReportTable(state.reportCompras);
+            });
+            $('view-kanban-toggle')?.addEventListener('click', () => {
+                UIReports.toggleReportView('kanban');
+            });
+            $('btn-report-buscar-bottom')?.addEventListener('click', () => $('btn-report-buscar')?.click());
+            $('btn-notifications')?.addEventListener('click', () => {
+                if (state.dashboardAlertCount > 0) {
+                    UI.showToast(`Há ${state.dashboardAlertCount} compra(s) atrasadas na obra selecionada.`, 'warning', 4000);
+                } else {
+                    UI.showToast('Nenhuma notificação no momento.', 'info', 3000);
+                }
+            });
+            const globalSearch = $('global-search');
+            globalSearch?.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    UI.runGlobalSearch(globalSearch.value);
+                }
+            });
+        } catch (err) {
+            console.warn('Erro ao ligar listeners do contexto/sidebar:', err);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                $('global-search')?.focus();
+            }
+        });
+
         document.addEventListener('click', async (e) => {
             const el = e.target.closest('button,a,tr');
             if (!el) return;
@@ -219,7 +298,26 @@ const App = {
 
             if (action) {
                 try {
+                    if (action === 'wizard-next') {
+                        const nextStep = Number(el.dataset.nextStep || 2);
+                        UIForms.goToWizardStep(nextStep);
+                        return;
+                    }
+                    if (action === 'wizard-prev') {
+                        UIForms.goToWizardStep(UIForms.getCurrentWizardStep() - 1);
+                        return;
+                    }
                     if (action === 'view-pdf') await UI.showPdfModal(path);
+                    if (action === 'view-compra') {
+                        await UI.showCompraDetails(id);
+                        return;
+                    }
+                    if (action === 'view-obra') {
+                        state.currentObraId = id;
+                        UI.showPage('dashboard');
+                        await UI.renderDashboardStats(id);
+                        return;
+                    }
                     if (action === 'edit-obra') {
                         if (!AuthMiddleware.canEditObra()) {
                             UI.showToast('Você não tem permissão para editar obras.', true);
@@ -227,7 +325,7 @@ const App = {
                         }
                         UI.showObraEditModal(id);
                     }
-                    
+
                     if (action === 'delete-obra') {
                         if (!AuthMiddleware.canDeleteObra()) {
                             UI.showToast('Você não tem permissão para deletar obras.', true);
@@ -243,7 +341,7 @@ const App = {
                             }
                         });
                     }
-                    
+
                     if (action === 'edit-compra') {
                         if (!AuthMiddleware.canEditCompra()) {
                             UI.showToast('Você não tem permissão para editar compras.', true);
@@ -251,7 +349,7 @@ const App = {
                         }
                         UI.showCompraEditModal(id);
                     }
-                    
+
                     if (action === 'delete-compra') {
                         if (!AuthMiddleware.canEditCompra()) {
                             UI.showToast('Você não tem permissão para deletar compras.', true);
@@ -268,13 +366,27 @@ const App = {
                         });
                     }
 
-                    // Lógica de exclusão genérica
+                    if (action === 'kanban-next') {
+                        const next = UIReports.getNextStatus(el.dataset.current || 'Nao iniciado');
+                        if (!next || next === el.dataset.current) return;
+                        try {
+                            await Data.updateCompraStatus(id, next);
+                            const compras = state.reportCompras || [];
+                            compras.forEach(c => { if (c.id === id) c.status_compra = next; });
+                            UIReports.renderKanban(compras);
+                            UI.showToast('Status atualizado no quadro.');
+                        } catch (err) {
+                            UI.showToast(err.message, true);
+                        }
+                        return;
+                    }
+
                     const deleteActions = {
                         'delete-comprador': { id, collection: 'compradores', check: 'compras', field: 'compradorId', name: 'Comprador' },
                         'delete-fornecedor': { id, collection: 'fornecedores', check: 'compras', field: 'fornecedorId', name: 'Fornecedor' },
                         'delete-centro-custo': { id, collection: 'centrosCusto', check: 'compras', field: 'centroCustoId', name: 'Centro de Custo' }
                     };
-                    
+
                     if (deleteActions[action]) {
                         if (!AuthMiddleware.canDeleteCadastros()) {
                             UI.showToast('Você não tem permissão para deletar cadastros.', true);
@@ -291,7 +403,7 @@ const App = {
                             }
                         });
                     }
-                    
+
                     if (action === 'edit-comprador') {
                         if (!AuthMiddleware.canEditCadastros()) {
                             UI.showToast('Você não tem permissão para editar cadastros.', true);
@@ -313,7 +425,7 @@ const App = {
                         }
                         UI.showCentroCustoEditModal(id);
                     }
-                    
+
                     if (action === 'add-cadastro') {
                         const targetFormId = el.dataset.targetForm;
                         UI.showPage('cadastros');
@@ -335,21 +447,27 @@ const App = {
                 }
                 return;
             }
-            
-            // Botões específicos
+
             if (el.id === 'btn-report-buscar') {
                 UI.showReportTableLoading(true);
                 try {
-                    const getSelected = (id) => Array.from($(id).selectedOptions).map(o => o.value);
+                    const getSelected = (id) => {
+                        const select = $(id);
+                        return select ? Array.from(select.selectedOptions).map(o => o.value) : [];
+                    };
+                    const safeValue = (id) => {
+                        const input = $(id);
+                        return input ? input.value : '';
+                    };
                     const filters = {
-                        dateStart: $('report-filter-date-start').value,
-                        dateEnd: $('report-filter-date-end').value,
-                        status: $('report-filter-status').value,
-                        natureza: $('report-filter-natureza').value,
+                        dateStart: $('report-filter-date-start')?.value || '',
+                        dateEnd: $('report-filter-date-end')?.value || '',
+                        status: safeValue('report-filter-status'),
+                        natureza: safeValue('report-filter-natureza'),
                         obras: getSelected('report-filter-obra'),
                         fornecedores: getSelected('report-filter-fornecedor'),
                         compradores: getSelected('report-filter-comprador'),
-                        searchText: $('report-search-text').value.toLowerCase(),
+                        searchText: safeValue('report-search-text').toLowerCase(),
                         sortCol: state.reportSort.col,
                         sortDir: state.reportSort.dir
                     };
@@ -357,10 +475,11 @@ const App = {
                     UI.renderReportTable(compras);
                 } catch (err) {
                     UI.showToast(err.message, true);
-                    UI.renderReportTable([]); 
+                    UI.renderReportTable([]);
                 }
+                return;
             }
-            
+
             if (el.id === 'btn-export-csv') {
                 try {
                     await Data.exportCSV();
@@ -368,11 +487,19 @@ const App = {
                     UI.showToast(err.message, true);
                 }
             }
+            if (el.id === 'btn-dashboard-edit') {
+                if (!state.currentObraId) {
+                    UI.showToast('Selecione uma obra antes de editar.', true);
+                } else if (!AuthMiddleware.canEditObra()) {
+                    UI.showToast('Você não tem permissão para editar obras.', true);
+                } else {
+                    UI.showObraEditModal(state.currentObraId);
+                }
+            }
             if (el.id === 'btn-dashboard-refresh') UI.renderDashboardStats(state.currentObraId);
             if (el.id === 'btn-clear-cc-filter') UI.filterDashboardTableByCC(null);
         });
-        
-        // Fechamento de Modais
+
         $('btnConfirmCancel').addEventListener('click', () => $('confirmModal').close());
         $('btnClosePdf').addEventListener('click', () => $('pdfModal').close());
         $('btnEditObraCancel').addEventListener('click', () => $('obraEditModal').close());
@@ -384,56 +511,82 @@ const App = {
         $('btnEditFornecedorCancel').addEventListener('click', () => $('fornecedorEditModal').close());
         $('btnEditCentroCustoCancel').addEventListener('click', () => $('centroCustoEditModal').close());
 
-        // Eventos de Formulário (Submit)
         try {
-            $('form-obra').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.saveObra(e.target); 
+            $('form-obra').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.saveObra(e.target);
                     UI.showToast('Obra salva com sucesso!');
                     e.target.reset();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-fornecedor').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.saveGenericForm(e.target, 'fornecedores'); 
+            $('form-fornecedor').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.saveGenericForm(e.target, 'fornecedores');
                     UI.showToast('Fornecedor salvo com sucesso!');
                     e.target.reset();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-centro-custo').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.saveGenericForm(e.target, 'centrosCusto'); 
+            $('form-centro-custo').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.saveGenericForm(e.target, 'centrosCusto');
                     UI.showToast('Centro de Custo salvo com sucesso!');
                     e.target.reset();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-comprador').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.saveGenericForm(e.target, 'compradores'); 
+            $('form-comprador').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.saveGenericForm(e.target, 'compradores');
                     UI.showToast('Comprador salvo com sucesso!');
                     e.target.reset();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-compra').addEventListener('submit', async (e) => { 
+            $('form-compra').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
+                const btn = form.querySelector('button[type="submit"]');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+                UI.setLoadingState(btn, true, 'Registrando...');
                 try {
+                    if (!form.obraId?.value) {
+                        UI.showToast("Selecione a obra nos filtros acima antes de registrar a compra.", true);
+                        return;
+                    }
                     UI.showToast("Enviando arquivos, aguarde...", false);
                     await Data.saveCompra(form);
                     UI.showToast('Compra registrada com sucesso!');
                     form.reset();
+                    form.obraId.value = '';
                     $('registro-orcamento-resumo').classList.add('hidden');
                     $('registro-justificativa-wrapper').classList.add('hidden');
                 } catch (err) {
@@ -444,76 +597,103 @@ const App = {
                     } else {
                         UI.showToast(err.message, true);
                     }
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
 
-            $('form-edit-obra').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.updateObra(e.target); 
+            $('form-edit-obra').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.updateObra(e.target);
                     UI.showToast('Obra atualizada!');
                     $('obraEditModal').close();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-compra').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
+            $('form-edit-compra').addEventListener('submit', async (e) => {
+                e.preventDefault();
                 const form = e.target;
-                try { 
-                    await Data.updateCompra(form); 
+                const btn = form.querySelector('button[type="submit"]');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.updateCompra(form);
                     UI.showToast('Compra atualizada!');
                     $('compraEditModal').close();
-                } catch (err) { 
+                } catch (err) {
                     if (err.message === "JUSTIFICATIVA_NECESSARIA") {
                         $('edit-justificativa-wrapper').classList.remove('hidden');
                         form.justificativa_estouro_orcamento.required = true;
                         UI.showToast("Estouro de orçamento! Justificativa obrigatória.", true);
                     } else {
-                        UI.showToast(`Erro ao atualizar: ${err.message}`, true); 
+                        UI.showToast(`Erro ao atualizar: ${err.message}`, true);
                     }
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-comprador').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.updateGeneric(e.target, 'compradores'); 
+            $('form-edit-comprador').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.updateGeneric(e.target, 'compradores');
                     UI.showToast('Cadastro atualizado!');
                     $('compradorEditModal').close();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-fornecedor').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.updateGeneric(e.target, 'fornecedores'); 
+            $('form-edit-fornecedor').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.updateGeneric(e.target, 'fornecedores');
                     UI.showToast('Cadastro atualizado!');
                     $('fornecedorEditModal').close();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-centro-custo').addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
-                try { 
-                    await Data.updateGeneric(e.target, 'centrosCusto'); 
+            $('form-edit-centro-custo').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button[type="submit"]');
+                UI.setLoadingState(btn, true);
+                try {
+                    await Data.updateGeneric(e.target, 'centrosCusto');
                     UI.showToast('Cadastro atualizado!');
                     $('centroCustoEditModal').close();
-                } catch (err) { 
-                    UI.showToast(`Erro: ${err.message}`, true); 
+                } catch (err) {
+                    UI.showToast(`Erro: ${err.message}`, true);
+                } finally {
+                    UI.setLoadingState(btn, false);
                 }
             });
-        } catch (err) { console.warn("Erro ao anexar listeners de formulário:", err); }
-        
-        // Listener do Checkbox de Estoque
+        } catch (err) {
+            console.warn("Erro ao anexar listeners de formulário:", err);
+        }
+
         try {
             const formCompra = $('form-compra');
             if (formCompra) {
-                const checkEstoque = formCompra.elements['retirada_estoque']; 
+                const checkEstoque = formCompra.elements['retirada_estoque'];
                 if (checkEstoque) {
                     checkEstoque.addEventListener('change', (e) => {
-                        UI.toggleEstoqueMode(formCompra, e.target.checked); 
+                        UIForms.toggleEstoqueMode(formCompra, e.target.checked);
                     });
                 } else {
                     console.warn("Elemento 'retirada_estoque' não encontrado no 'form-compra'.");
@@ -521,11 +701,19 @@ const App = {
             } else {
                 console.warn("Formulário 'form-compra' não encontrado.");
             }
+            const editForm = $('form-edit-compra');
+            if (editForm) {
+                const checkEditEstoque = editForm.elements['retirada_estoque'];
+                if (checkEditEstoque) {
+                    checkEditEstoque.addEventListener('change', (e) => {
+                        UIForms.toggleEstoqueMode(editForm, e.target.checked);
+                    });
+                }
+            }
         } catch (err) {
             console.warn("Erro ao ligar o listener de retirada de estoque:", err);
         }
-        
-        // Eventos de 'Change'
+
         document.addEventListener('change', async (e) => {
             const action = e.target.dataset.action;
             if (action === 'change-obra-status') {
@@ -536,7 +724,7 @@ const App = {
                     UI.showToast(`Erro ao mudar status: ${err.message}`, true);
                 }
             }
-            
+
             if (e.target.id === 'edit-nf_conferida') {
                 const porInput = $('edit-nf_conferida_por');
                 const emInput = $('edit-nf_conferida_em');
@@ -549,8 +737,7 @@ const App = {
                 }
             }
         });
-        
-        // Eventos de 'Input' (Máscaras)
+
         document.addEventListener('input', (e) => {
             if (e.target.dataset.mask === 'currency') {
                 e.target.value = Utils.formatCurrencyInput(e.target.value);
@@ -560,14 +747,13 @@ const App = {
             }
         });
 
-        // Ordenação da Tabela de Relatório
         document.querySelector('#page-relatorio-compras thead').addEventListener('click', (e) => {
             const th = e.target.closest('th');
             if (!th || !th.dataset.sort) return;
-            
+
             const newCol = th.dataset.sort;
             document.querySelectorAll('#page-relatorio-compras thead th[data-sort]').forEach(t => {
-                if (t !== th) t.innerHTML = t.innerHTML.replace(' ↑', '').replace(' ↓', '');
+                if (t !== th) t.innerHTML = t.innerHTML.replace(' ^', '').replace(' v', '');
             });
 
             if (state.reportSort.col === newCol) {
@@ -576,23 +762,43 @@ const App = {
                 state.reportSort.col = newCol;
                 state.reportSort.dir = 'asc';
             }
-            
-            th.innerHTML = th.innerHTML.replace(' ↑', '').replace(' ↓', '');
-            th.innerHTML += state.reportSort.dir === 'asc' ? ' ↑' : ' ↓';
+
+            th.innerHTML = th.innerHTML.replace(' ^', '').replace(' v', '');
+            th.innerHTML += state.reportSort.dir === 'asc' ? ' ^' : ' v';
 
             $('btn-report-buscar').click();
         });
 
-        // Filtros e Selects de Dashboard
+        const dashboardHead = document.querySelector('#dashboard-table-head');
+        if (dashboardHead) {
+            dashboardHead.addEventListener('click', (e) => {
+                const th = e.target.closest('th[data-sort]');
+                if (!th) return;
+                const col = th.dataset.sort;
+                if (state.dashboardSort.col === col) {
+                    state.dashboardSort.dir = state.dashboardSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.dashboardSort.col = col;
+                    state.dashboardSort.dir = 'asc';
+                }
+                if (state.currentObraId) {
+                    UI.renderDashboardStats(state.currentObraId);
+                }
+            });
+        }
+
         $('dashboard-search-query').addEventListener('keyup', UI.updateDashboardObraList);
         $('dashboard-status-filter').addEventListener('change', UI.updateDashboardObraList);
         $('dashboard-obra-select').addEventListener('change', (e) => UI.renderDashboardStats(e.target.value || null));
-        
-        // Filtros e Selects de Registro
+
         $('registro-search-query').addEventListener('keyup', UI.updateRegistroObraList);
         $('registro-status-filter').addEventListener('change', UI.updateRegistroObraList);
         $('registro-obra-select').addEventListener('change', (e) => {
             const obraId = e.target.value;
+            const formCompra = $('form-compra');
+            if (formCompra?.obraId) {
+                formCompra.obraId.value = obraId || '';
+            }
             UI.updateOrcamentoResumo('registro', obraId);
             $('registro-justificativa-wrapper').classList.add('hidden');
             $('form-compra').justificativa_estouro_orcamento.required = false;
@@ -605,18 +811,23 @@ const App = {
             $('form-edit-compra').justificativa_estouro_orcamento.required = false;
         });
 
-        // 
-        // / / / / / / / / / / / / / / / / / / / / / / /
-        // / /   AQUI ESTÁ A LINHA QUE FALTAVA       / /
-        // / / / / / / / / / / / / / / / / / / / / / /
-        //
-        // Relatório Fornecedor
+        const bindObraFilhaToggle = (checkboxId, wrapperId) => {
+            const checkbox = $(checkboxId);
+            const wrapper = $(wrapperId);
+            if (!checkbox || !wrapper) return;
+            const toggle = () => wrapper.classList.toggle('hidden', !checkbox.checked);
+            checkbox.addEventListener('change', toggle);
+            toggle();
+        };
+        bindObraFilhaToggle('obra-filha-toggle', 'obra-filha-wrapper');
+        bindObraFilhaToggle('obra-edit-filha-toggle', 'obra-edit-filha-wrapper');
+
         $('relatorio-fornecedor-select').addEventListener('change', (e) => UI.renderRelatorioFornecedor(e.target.value || null));
-        //
-        // / / / / / / / FIM DA ALTERAÇÃO / / / / / / /
-        //
+        $('calendar-filter-type')?.addEventListener('change', () => UI.handleCalendarFilterChange());
+        $('btn-calendar-prev')?.addEventListener('click', () => UI.shiftCalendarWindow(-1));
+        $('btn-calendar-next')?.addEventListener('click', () => UI.shiftCalendarWindow(1));
     }
 };
 
 // --- INICIALIZAÇÃO ---
-App.init(); // Inicia o App
+App.init();

@@ -1,0 +1,174 @@
+import { state } from './state.js';
+import { Utils } from './utils.js';
+import { Data } from './data.js';
+
+const $ = (id) => document.getElementById(id);
+const VIEW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>`;
+const STATUS_FLOW = ['Nao iniciado', 'Em cotacao', 'Aprovado', 'Comprado', 'Recebido'];
+const normalizeStatus = (s = '') => {
+    const map = {
+        'Não iniciado': 'Nao iniciado',
+        'Nao iniciado': 'Nao iniciado',
+        'Em cotação': 'Em cotacao',
+        'Em cotacao': 'Em cotacao'
+    };
+    return map[s] || s;
+};
+
+export const UIReports = {
+    renderRelatorioComprasPage: () => {
+        const renderMultiSelect = (elId, data, formatter) => { $(elId).innerHTML = data.map(formatter).join(''); };
+        renderMultiSelect('report-filter-obra', state.cache.obras, o => `<option value="${o.id}">${Utils.escapeHtml(o.nome_obra)}</option>`);
+        renderMultiSelect('report-filter-fornecedor', state.cache.fornecedores, f => `<option value="${f.id}">${Utils.escapeHtml(f.nome)}</option>`);
+        renderMultiSelect('report-filter-comprador', state.cache.compradores, c => `<option value="${c.id}">${Utils.escapeHtml(c.nome)}</option>`);
+        $('report-table-body').innerHTML = `<tr><td colspan="8" class="p-4 text-center text-[var(--text-secondary)]">Use os filtros e clique em "Buscar Compras".</td></tr>`;
+        UIReports.toggleReportView('table');
+    },
+
+    renderRelatoriosFornecedorPage: () => {
+        const select = $('relatorio-fornecedor-select');
+        if (!select) return;
+        const current = select.value;
+        select.innerHTML = `<option value="">Selecione um fornecedor</option>` +
+            state.cache.fornecedores
+                .map(f => `<option value="${f.id}">${Utils.escapeHtml(f.nome)}</option>`)
+                .join('');
+        select.value = current && state.cache.fornecedores.some(f => f.id === current) ? current : '';
+        $('relatorio-fornecedor-content').classList.add('hidden');
+        $('relatorio-fornecedor-table-body').innerHTML = '';
+    },
+
+    renderRelatorioFornecedor: async (fornecedorId) => {
+        if (!fornecedorId) {
+            $('relatorio-fornecedor-content').classList.add('hidden');
+            return;
+        }
+
+        const fornecedor = state.cache.fornecedores.find(f => f.id === fornecedorId);
+        if (!fornecedor) return;
+
+        $('rel-forn-nome').textContent = Utils.escapeHtml(fornecedor.nome);
+
+        const compras = await Data.getComprasByFornecedor(fornecedorId);
+
+        const totalGasto = compras.reduce((sum, c) => sum + (c.valor_total || 0), 0);
+        $('rel-forn-total').textContent = Utils.formatCurrency(totalGasto);
+
+        const tableBody = $('relatorio-fornecedor-table-body');
+        const obraMap = new Map(state.cache.obras.map(o => [o.id, `${o.nome_obra}${o.numero_os ? ` (${o.numero_os})` : ''}`]));
+
+        tableBody.innerHTML = compras.length > 0
+            ? compras.map(c => `
+                <tr class="text-sm">
+                    <td class="px-4 py-2">${Utils.escapeHtml(obraMap.get(c.obraId)) || 'Obra N/D'}</td>
+                    <td class="px-4 py-2">${Utils.fmtBR(c.data_emissao)}</td>
+                    <td class="px-4 py-2 font-medium">${Utils.escapeHtml(c.numero_nf)}</td>
+                    <td class="px-4 py-2">${Utils.formatCurrency(c.valor_total)}</td>
+                    <td class="px-4 py-2">
+                        ${c.pdf_nf_path ? `<button data-action="view-pdf" data-path="${c.pdf_nf_path}" class="text-blue-600 hover:underline">NF-e</button>` : ''}
+                        ${c.pdf_cte_path ? `<button data-action="view-pdf" data-path="${c.pdf_cte_path}" class="text-blue-600 hover:underline ml-2">CT-e</button>` : ''}
+                    </td>
+                </tr>`).join('')
+            : `<tr><td colspan="5" class="p-4 text-center text-gray-500">Nenhuma compra encontrada.</td></tr>`;
+
+        $('relatorio-fornecedor-content').classList.remove('hidden');
+    },
+
+    showReportTableLoading: (isLoading) => {
+        const tableBody = $('report-table-body');
+        if (isLoading) {
+            tableBody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">Buscando...</td></tr>`;
+        }
+    },
+
+    renderReportTable: (compras) => {
+        const tableBody = $('report-table-body');
+
+        state.reportCompras = compras;
+        UIReports.renderKanban(compras);
+
+        if (compras.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">Nenhum resultado encontrado.</td></tr>`;
+            return;
+        }
+
+        const obraMap = new Map(state.cache.obras.map(o => [o.id, `${o.nome_obra}${o.numero_os ? ` (${o.numero_os})` : ''}`]));
+        const compradorMap = new Map(state.cache.compradores.map(c => [c.id, c.nome]));
+
+        tableBody.innerHTML = compras.map(c => `
+            <tr class="text-sm">
+                <td class="px-4 py-2">${Utils.escapeHtml(obraMap.get(c.obraId)) || 'N/D'}</td>
+                <td class="px-4 py-2 font-medium">${Utils.escapeHtml(c.numero_nf)}</td>
+                <td class="px-4 py-2">${Utils.renderStatusBadge(c.status_compra, c.previsao_entrega)}</td>
+                <td class="px-4 py-2">${Utils.fmtBR(c.data_recebimento)}</td>
+                <td class="px-4 py-2">${Utils.fmtBR(c.data_emissao)}</td>
+                <td class="px-4 py-2">${Utils.escapeHtml(compradorMap.get(c.compradorId)) || 'N/D'}</td>
+                <td class="px-4 py-2">${Utils.formatCurrency(c.valor_total)}</td>
+                <td class="px-4 py-2 flex items-center gap-2 whitespace-nowrap">
+                    <button data-action="view-compra" data-id="${c.id}" class="btn-secondary btn-small" title="Visualizar">${VIEW_ICON}</button>
+                    <button data-action="edit-compra" data-id="${c.id}" class="btn-secondary btn-small">Editar</button>
+                    <button data-action="delete-compra" data-id="${c.id}" class="btn-danger btn-small">Excluir</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    renderKanban: (compras) => {
+        const obraMap = new Map(state.cache.obras.map(o => [o.id, `${o.nome_obra}${o.numero_os ? ` (${o.numero_os})` : ''}`]));
+        const colIds = {
+            'Nao iniciado': 'kanban-col-nao-iniciado',
+            'Em cotacao': 'kanban-col-em-cotacao',
+            'Aprovado': 'kanban-col-aprovado',
+            'Comprado': 'kanban-col-comprado',
+            'Recebido': 'kanban-col-recebido'
+        };
+        STATUS_FLOW.forEach(status => {
+            const col = $(colIds[status]);
+            const countEl = document.querySelector(`[data-kanban-count="${status}"]`);
+            const items = compras.filter(c => normalizeStatus(c.status_compra || 'Nao iniciado') === status);
+            if (countEl) countEl.textContent = items.length;
+            if (!col) return;
+            col.innerHTML = items.length === 0 ? `<div class="text-xs text-[var(--text-secondary)]">Sem itens</div>` :
+                items.map(c => `
+                    <div class="border border-[var(--border-color)] rounded-lg p-3 bg-[var(--bg-secondary)] shadow-sm space-y-2">
+                        <div class="flex justify-between items-center">
+                            <div class="font-semibold text-sm">${Utils.escapeHtml(c.numero_nf || 'Sem NF')}</div>
+                            <span class="text-xs text-[var(--text-secondary)]">${Utils.fmtBR(c.data_emissao)}</span>
+                        </div>
+                        <div class="text-xs text-[var(--text-secondary)]">${Utils.escapeHtml(obraMap.get(c.obraId) || 'Obra N/D')}</div>
+                        <div class="text-sm font-semibold">${Utils.formatCurrency(c.valor_total || 0)}</div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button class="btn-secondary btn-small" data-action="view-compra" data-id="${c.id}">Detalhes</button>
+                            ${status !== 'Recebido' ? `<button class="btn btn-small" data-action="kanban-next" data-id="${c.id}" data-current="${status}">Mover</button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+        });
+    },
+
+    toggleReportView: (mode) => {
+        const isKanban = mode === 'kanban';
+        const board = $('kanban-board');
+        const tableWrapper = $('report-table-wrapper');
+        const tableBtn = $('view-table-toggle');
+        const kanbanBtn = $('view-kanban-toggle');
+        if (board) board.classList.toggle('hidden', !isKanban);
+        if (tableWrapper) tableWrapper.classList.toggle('hidden', isKanban);
+        if (tableBtn) {
+            tableBtn.classList.toggle('btn', !isKanban);
+            tableBtn.classList.toggle('btn-secondary', isKanban);
+        }
+        if (kanbanBtn) {
+            kanbanBtn.classList.toggle('btn-secondary', !isKanban);
+            kanbanBtn.classList.toggle('btn', isKanban);
+        }
+        if (isKanban && state.reportCompras?.length) {
+            UIReports.renderKanban(state.reportCompras);
+        }
+    },
+
+    getNextStatus: (current) => {
+        const idx = STATUS_FLOW.indexOf(current);
+        return idx >= 0 && idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : current;
+    }
+};
