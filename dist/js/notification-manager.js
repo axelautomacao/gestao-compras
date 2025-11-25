@@ -82,6 +82,14 @@ export const NotificationManager = (() => {
         return node;
     };
 
+    const updateBadge = () => {
+        const badge = $('notifications-badge');
+        if (!badge) return;
+        const total = queue.length;
+        badge.textContent = total > 99 ? '99+' : String(total);
+        badge.classList.toggle('hidden', total === 0);
+    };
+
     const render = () => {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -98,6 +106,7 @@ export const NotificationManager = (() => {
                 n._timeout = setTimeout(() => remove(n.id), n.duration);
             }
         });
+        updateBadge();
     };
 
     const remove = (id) => {
