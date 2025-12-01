@@ -22,5 +22,7 @@ export const state = {
     reportSort: { col: 'emissao', dir: 'desc' },
     dashboardSort: { col: 'data_recebimento', dir: 'asc' },
     reportCompras: [],
-    dashboardAlertCount: 0
+    dashboardAlertCount: 0,
+    notificationPrefs: null,
+    usersCache: []
 };

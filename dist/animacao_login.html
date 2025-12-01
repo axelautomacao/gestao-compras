@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Axel Automação - Transição de Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Animações customizadas em CSS puro para performance */
+        
+        /* 1. Entrada suave */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 2. Pulsação (Heartbeat) */
+        @keyframes pulseLogo {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* 3. Saída Expansiva */
+        @keyframes zoomOutFade {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(4); /* Aumenta muito o tamanho */
+                opacity: 0;          /* Enquanto fica transparente */
+            }
+        }
+
+        /* Classes utilitárias para controle de estado */
+        .anim-enter {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .anim-pulse {
+            animation: pulseLogo 1.5s ease-in-out infinite;
+        }
+
+        .anim-exit {
+            animation: zoomOutFade 0.6s ease-in forwards;
+        }
+
+        /* Classe para esconder a tela de loading */
+        .loader-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        /* Estilo para simular o Dashboard (Conteúdo após login) */
+        .dashboard-content {
+            opacity: 0;
+            transition: opacity 1s ease 0.5s; /* Delay para aparecer suavemente */
+        }
+        .dashboard-visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans h-screen overflow-hidden relative">
+
+    <!-- ========================================== -->
+    <!-- TELA DE TRANSIÇÃO (LOADER) -->
+    <!-- ========================================== -->
+    <div id="loader" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center">
+        
+        <!-- Container do Logo -->
+        <div id="logo-container" class="opacity-0"> <!-- Começa invisível -->
+            
+            <!-- 
+                SUBSTITUIÇÃO: 
+                Para usar seu logo real, apague todo o bloco <svg> abaixo 
+                e use: <img src="seu-logo.png" class="w-48 h-auto" />
+            -->
+            <img src="./images/logo_axel__principal.png" class="w-48 h-auto" />
+            <!-- Fim do Logo SVG -->
+
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CONTEÚDO DO SITE (PÓS-LOGIN) -->
+    <!-- ========================================== -->
+    <div id="app-content" class="dashboard-content w-full h-full flex">
+        
+        <!-- Sidebar Fictícia -->
+        <aside class="w-64 bg-slate-900 text-white hidden md:flex flex-col">
+            <div class="p-6 text-xl font-bold border-b border-slate-700">Axel Admin</div>
+            <nav class="flex-1 p-4 space-y-2">
+                <div class="p-3 bg-blue-600 rounded cursor-pointer">Dashboard</div>
+                <div class="p-3 hover:bg-slate-800 rounded cursor-pointer text-slate-300">Clientes</div>
+                <div class="p-3 hover:bg-slate-800 rounded cursor-pointer text-slate-300">Relatórios</div>
+                <div class="p-3 hover:bg-slate-800 rounded cursor-pointer text-slate-300">Configurações</div>
+            </nav>
+        </aside>
+
+        <!-- Área Principal -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            <header class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Bem-vindo de volta!</h1>
+                <button onclick="iniciarAnimacao()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded shadow transition">
+                    Replay Animação
+                </button>
+            </header>
+
+            <!-- Cards de Exemplo -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                    <div class="text-gray-500 text-sm">Vendas Hoje</div>
+                    <div class="text-2xl font-bold">R$ 12.450,00</div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
+                    <div class="text-gray-500 text-sm">Novos Clientes</div>
+                    <div class="text-2xl font-bold">+18</div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-orange-500">
+                    <div class="text-gray-500 text-sm">Alertas do Sistema</div>
+                    <div class="text-2xl font-bold">3 Pendentes</div>
+                </div>
+            </div>
+
+            <div class="mt-8 bg-white p-8 rounded shadow h-64 flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-200">
+                Área de Conteúdo Principal
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const loader = document.getElementById('loader');
+        const logoContainer = document.getElementById('logo-container');
+        const appContent = document.getElementById('app-content');
+
+        function iniciarAnimacao() {
+            // Resetar estados para permitir replay
+            loader.classList.remove('loader-hidden', 'hidden');
+            appContent.classList.remove('dashboard-visible');
+            logoContainer.classList.remove('anim-enter', 'anim-pulse', 'anim-exit');
+            logoContainer.style.opacity = '0'; // Garante que comece invisível
+            
+            // FASE 1: Entrada (Appear)
+            // Pequeno delay inicial para o navegador renderizar
+            setTimeout(() => {
+                logoContainer.classList.add('anim-enter');
+            }, 100);
+
+            // FASE 2: Pulsar (Pulse)
+            // Começa após a entrada terminar (0.8s)
+            setTimeout(() => {
+                logoContainer.classList.remove('anim-enter');
+                logoContainer.classList.add('anim-pulse');
+            }, 900);
+
+            // FASE 3: Saída (Exit / Scale Up)
+            // Acontece após pulsar por um tempo (ex: 2.5s totais)
+            setTimeout(() => {
+                logoContainer.classList.remove('anim-pulse');
+                logoContainer.classList.add('anim-exit');
+            }, 2500);
+
+            // FASE 4: Finalizar e mostrar conteúdo
+            // Quando a animação de saída termina
+            setTimeout(() => {
+                loader.classList.add('loader-hidden');
+                
+                // Remove do DOM após o fade out do container para liberar memória
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    appContent.classList.add('dashboard-visible');
+                }, 500);
+
+            }, 3000);
+        }
+
+        // Inicia automaticamente ao carregar a página
+        window.addEventListener('load', () => {
+            iniciarAnimacao();
+        });
+    </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 ﻿// js/data.js
-import { db, storage, collection, addDoc, getDocs, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, writeBatch, runTransaction, orderBy, startAt, endAt, Timestamp, ref, uploadBytes, getDownloadURL, deleteObject } from './firebase-config.js';
+import { db, storage, auth, collection, addDoc, getDocs, onSnapshot, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where, writeBatch, runTransaction, orderBy, startAt, endAt, Timestamp, ref, uploadBytes, getDownloadURL, deleteObject } from './firebase-config.js';
 import { state } from './state.js';
 import { Utils } from './utils.js';
 // import { UI } from './ui.js'; // <-- REMOVIDO!
@@ -292,6 +292,9 @@ export const Data = {
         const numero_nf_val = data.numero_nf ? String(data.numero_nf).trim() : '';
         if (!isRetirada && !numero_nf_val) throw new Error("Numero da NF-e obrigatorio.");
         if (!data.data_emissao) throw new Error("Data de Emissao obrigatoria.");
+        if (!data.data_solicitacao) {
+            data.data_solicitacao = data.data_emissao || new Date().toISOString().split('T')[0];
+        }
     },
 
     _uploadFile: async (file, path, validator) => {
@@ -338,6 +341,8 @@ export const Data = {
             ? await Data._uploadFile(fotoRcFile, `compras/${numero_nf_trim || Date.now()}_${data.obraId}_RC${Utils.getFileExtension(fotoRcFile.name) || '.jpg'}`, Utils.validateImage)
             : null;
 
+        const dataSolicitacao = data.data_solicitacao || data.data_emissao || new Date().toISOString().split('T')[0];
+
         const dadosCompra = {
             obraId: data.obraId,
             centroCustoId: data.centroCustoId,
@@ -345,7 +350,9 @@ export const Data = {
             compradorId: data.compradorId,
             numero_nf: numero_nf_trim || null,
             descricao_compra: descricaoCompra,
+            apelido_compra: data.apelido_compra?.trim() || null,
             solicitante: data.solicitante?.trim() || null,
+            data_solicitacao: dataSolicitacao,
             data_emissao: data.data_emissao,
             valor_total: valorTotal,
             natureza_compra: data.natureza_compra,
@@ -453,6 +460,7 @@ export const Data = {
         const data = Object.fromEntries(formData.entries());
         const id = data.id;
         const descricaoCompra = (data.descricao_compra || '').trim() || null;
+        const dataSolicitacao = data.data_solicitacao || data.data_emissao || new Date().toISOString().split('T')[0];
         
         // try { // <-- Removido, o app.js fará o try/catch
             Data._validarCompra(data);
@@ -479,10 +487,15 @@ export const Data = {
             }
 
             const dadosUpdate = {
-                obraId: data.obraId, centroCustoId: data.centroCustoId, fornecedorId: data.fornecedorId || null, compradorId: data.compradorId,
+                obraId: data.obraId,
+                centroCustoId: data.centroCustoId,
+                fornecedorId: data.fornecedorId || null,
+                compradorId: data.compradorId,
                 numero_nf: data.numero_nf?.trim() || null,
                 descricao_compra: descricaoCompra,
+                apelido_compra: data.apelido_compra?.trim() || null,
                 solicitante: data.solicitante?.trim() || null,
+                data_solicitacao: dataSolicitacao,
                 data_emissao: data.data_emissao,
                 valor_total: valorCompra,
                 natureza_compra: data.natureza_compra,
@@ -558,13 +571,14 @@ export const Data = {
     // Busca Compras para Relatório
     findCompras: async (filters) => {
         const sortMap = { 'obra': 'obraId', 'nf': 'numero_nf', 'status': 'status_compra', 'recebimento': 'data_recebimento', 'emissao': 'data_emissao', 'comprador': 'compradorId', 'valor': 'valor_total' };
-        const { dateStart, dateEnd, status, natureza, obras, fornecedores, compradores, searchText, sortCol, sortDir } = filters;
+        const { dateStart, dateEnd, status, natureza, obras, fornecedores = [], compradores = [], searchText, sortCol, sortDir, centroCusto, numeroNf, descricao } = filters;
         const constraints = [];
 
         if (dateStart) constraints.push(where("data_emissao", ">=", dateStart));
         if (dateEnd) constraints.push(where("data_emissao", "<=", dateEnd));
         if (status && status !== 'Atrasado') constraints.push(where("status_compra", "==", status));
         if (natureza) constraints.push(where("natureza_compra", "==", natureza));
+        if (centroCusto) constraints.push(where("centroCustoId", "==", centroCusto));
 
         const q = query(collection(db, "compras"), ...constraints);
         const snapshot = await getDocs(q);
@@ -578,6 +592,14 @@ export const Data = {
         }
         if (compradores.length > 0) {
             compras = compras.filter(c => compradores.includes(c.compradorId));
+        }
+        if (numeroNf) {
+            const nfTerm = String(numeroNf).toLowerCase();
+            compras = compras.filter(c => (c.numero_nf || '').toLowerCase().includes(nfTerm));
+        }
+        if (descricao) {
+            const descTerm = descricao.toLowerCase();
+            compras = compras.filter(c => (c.descricao_compra || '').toLowerCase().includes(descTerm));
         }
 
         if (searchText) {
@@ -669,19 +691,32 @@ export const Data = {
         const snapshot = await getDocs(query(collection(db, "compras")));
         const compras = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const hoje = new Date();
-        hoje.setHours(0,0,0,0);
+        hoje.setHours(0, 0, 0, 0);
         const result = { atrasados: [], sem_previsao: [], pendente_aprovacao: [], cotacao: [] };
+        const statusCounts = {};
+        const normalizeStatus = (s) => {
+            const val = (s || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+            if (val.includes('nao iniciado') || val.includes('não iniciado')) return 'nao iniciado';
+            if (val.includes('cot') || val.includes('cotacao')) return 'cotacao';
+            if (val.includes('pend')) return 'pendente';
+            if (val.includes('comprado')) return 'comprado';
+            if (val.includes('recebido')) return 'recebido';
+            return val || 'nao iniciado';
+        };
         compras.forEach(c => {
+            const status = normalizeStatus(c.status_compra || 'Não iniciado');
+            statusCounts[status] = (statusCounts[status] || 0) + 1;
+
             if (c.status_compra !== "Recebido" && c.previsao_entrega) {
                 const prev = new Date(c.previsao_entrega + "T12:00:00");
                 if (prev < hoje) result.atrasados.push(c);
             }
             if (!c.previsao_entrega) result.sem_previsao.push(c);
-            if (c.status_aprovacao === "Pendente") result.pendente_aprovacao.push(c);
-            if (c.status_compra === "Em cotacao" || c.status_compra === "Em cotação") {
+            if (normalizeStatus(c.status_aprovacao) === "pendente") result.pendente_aprovacao.push(c);
+            if (status === "cotacao") {
                 if (c.data_emissao) {
                     const emiss = new Date(c.data_emissao + "T12:00:00");
-                    const diffDays = (hoje - emiss) / (1000*60*60*24);
+                    const diffDays = (hoje - emiss) / (1000 * 60 * 60 * 24);
                     if (diffDays >= 7) result.cotacao.push(c);
                 } else {
                     result.cotacao.push(c);
@@ -690,12 +725,15 @@ export const Data = {
         });
         return {
             counts: {
+                total: compras.length,
                 atrasados: result.atrasados.length,
                 sem_previsao: result.sem_previsao.length,
                 pendente_aprovacao: result.pendente_aprovacao.length,
-                cotacao: result.cotacao.length
+                cotacao: result.cotacao.length,
+                status: statusCounts
             },
-            items: result
+            items: result,
+            compras
         };
     }
     ,
@@ -705,6 +743,113 @@ export const Data = {
         const snapshot = await getDocs(q);
         const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         return docs.slice(0, max);
+    },
+
+    // Configurações / Usuários
+    listUsers: async () => {
+        const snapshot = await getDocs(collection(db, 'usuarios'));
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+
+    getNotificationPrefs: async (userId) => {
+        if (!userId) return null;
+        const docRef = doc(db, 'settings', userId);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return null;
+        return snap.data()?.notificationPrefs || null;
+    },
+
+    saveNotificationPrefs: async (userId, prefs) => {
+        if (!userId) return;
+        const docRef = doc(db, 'settings', userId);
+        await setDoc(docRef, { notificationPrefs: prefs, updatedAt: Timestamp.now() }, { merge: true });
+    },
+
+    // --- Provisionamento (chama Cloud Function provisionUser) ---
+    _provisionEndpoint: () => {
+        const project = auth?.app?.options?.projectId || 'controle-de-obras-axel';
+        return globalThis.__PROVISION_URL || `https://us-central1-${project}.cloudfunctions.net/provisionUser`;
+    },
+
+    provisionUserAuth: async (payload) => {
+        const current = auth.currentUser;
+        if (!current) throw new Error('Usuário não autenticado');
+        const token = await current.getIdToken();
+        const res = await fetch(Data._provisionEndpoint(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'upsert', ...payload })
+        });
+        if (!res.ok) {
+            const msg = await res.text();
+            throw new Error(`Provisionamento falhou: ${msg}`);
+        }
+        return res.json();
+    },
+
+    updateUserClaims: async (payload) => {
+        return Data.provisionUserAuth(payload); // consolidado em provisionUserAuth
+    },
+
+    disableUser: async (uid) => {
+        const current = auth.currentUser;
+        if (!current) throw new Error('Usuário não autenticado');
+        const token = await current.getIdToken();
+        const res = await fetch(Data._provisionEndpoint(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'disable', uid })
+        });
+        if (!res.ok) {
+            const msg = await res.text();
+            throw new Error(`Falha ao desabilitar usuário: ${msg}`);
+        }
+        return res.json();
+    },
+
+    deleteUserRemote: async (uid) => {
+        const current = auth.currentUser;
+        if (!current) throw new Error('Usuário não autenticado');
+        const token = await current.getIdToken();
+        const res = await fetch(Data._provisionEndpoint(), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ action: 'delete', uid })
+        });
+        if (!res.ok) {
+            const msg = await res.text();
+            throw new Error(`Falha ao excluir usuário: ${msg}`);
+        }
+        return res.json();
+    },
+
+    saveUserProfile: async (profile) => {
+        if (!profile || !profile.id) throw new Error('Perfil inválido');
+        const payload = {
+            uid: profile.id,
+            nome: profile.nome || '',
+            email: profile.email || '',
+            role: profile.role || 'obra',
+            obraPadrao: profile.obraPadrao || null,
+            ativo: profile.ativo !== false,
+            updatedAt: Timestamp.now()
+        };
+        await setDoc(doc(db, 'usuarios', profile.id), payload, { merge: true });
+        return payload;
+    },
+
+    deleteUserProfile: async (id) => {
+        if (!id) throw new Error('ID inválido para exclusão');
+        await deleteDoc(doc(db, 'usuarios', id));
     }
 };
 

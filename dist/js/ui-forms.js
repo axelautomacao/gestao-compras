@@ -58,6 +58,39 @@ export const UIForms = {
         });
     },
 
+    setFormReadonly: (form, readonly) => {
+        if (!form) return;
+        form.dataset.readonly = readonly ? 'true' : 'false';
+        const controls = form.querySelectorAll('input, select, textarea');
+        controls.forEach(el => {
+            const isCheckbox = el.type === 'checkbox' || el.type === 'radio';
+            const isSelect = el.tagName === 'SELECT';
+            const isFile = el.type === 'file';
+
+            if (readonly) {
+                if (isCheckbox || isFile) {
+                    el.disabled = true;
+                } else if (isSelect) {
+                    el.setAttribute('aria-readonly', 'true');
+                    el.classList.add('pointer-events-none');
+                } else {
+                    el.readOnly = true;
+                }
+                el.classList.add('readonly-field');
+            } else {
+                if (isCheckbox || isFile) {
+                    el.disabled = false;
+                } else if (isSelect) {
+                    el.removeAttribute('aria-readonly');
+                    el.classList.remove('pointer-events-none');
+                } else {
+                    el.readOnly = false;
+                }
+                el.classList.remove('readonly-field');
+            }
+        });
+    },
+
     updateRegistroObraList: () => {
         const query = $('registro-search-query').value.toLowerCase();
         const status = $('registro-status-filter').value;
@@ -83,12 +116,44 @@ export const UIForms = {
         const fotoWrapper = $('registro-foto-rc-wrapper');
         const fotoInput = formElements['foto_rc'];
 
-        const camposParaDesativar = ['previsao_entrega', 'pdf_nf', 'pdf_cte'];
+        // Campos a desativar/limpar quando for retirada de estoque (apenas datas e status)
+        const camposParaDesativar = ['previsao_entrega', 'data_recebimento', 'data_emissao', 'data_solicitacao', 'status_compra'];
+
+        const lockField = (el) => {
+            if (!el) return;
+            if (el.type === 'file') {
+                el.disabled = true;
+            } else if (el.tagName === 'SELECT') {
+                el.setAttribute('aria-readonly', 'true');
+                el.classList.add('pointer-events-none');
+            } else {
+                el.readOnly = true;
+            }
+            el.classList.add('readonly-field');
+            el.tabIndex = -1;
+        };
+
+        const unlockField = (el) => {
+            if (!el) return;
+            if (el.type === 'file') {
+                el.disabled = false;
+            } else if (el.tagName === 'SELECT') {
+                el.removeAttribute('aria-readonly');
+                el.classList.remove('pointer-events-none');
+            } else {
+                el.readOnly = false;
+            }
+            el.classList.remove('readonly-field');
+            el.tabIndex = 0;
+        };
 
         if (isChecked) {
-            formElements['status_compra'].value = 'Recebido';
+            if (formElements['status_compra']) {
+                formElements['status_compra'].value = 'Recebido';
+            }
             if (formElements['fornecedorId'] && fornecedorEstoque) {
                 formElements['fornecedorId'].value = fornecedorEstoque.id;
+                formElements['fornecedorId'].classList.add("bg-gray-200", "cursor-not-allowed");
             }
             form.dataset.retiradaEstoque = 'true';
             if (formElements['retirada_estoque']) formElements['retirada_estoque'].value = 'on';
@@ -105,50 +170,18 @@ export const UIForms = {
                 formElements['data_emissao'].value = solicitacao;
             }
 
-            camposParaDesativar.forEach(nome => {
-                if (formElements[nome]) {
-                    formElements[nome].value = '';
-                    formElements[nome].disabled = true;
-                    formElements[nome].classList.add("bg-gray-200", ":root.dark:bg-gray-700");
-                }
-            });
-
-            if (formElements['numero_nf']) {
-                formElements['numero_nf'].value = '';
-                formElements['numero_nf'].disabled = false;
-                formElements['numero_nf'].classList.remove("bg-gray-200", ":root.dark:bg-gray-700");
-                formElements['numero_nf'].required = false;
-                try {
-                    const nfInput = formElements['numero_nf'];
-                    const labelEl = nfInput?.closest('div')?.querySelector('label');
-                    if (labelEl) {
-                        if (!nfInput.dataset.origLabel) nfInput.dataset.origLabel = labelEl.textContent || 'Número NF-e';
-                        labelEl.textContent = `${nfInput.dataset.origLabel} (opcional)`;
-                    }
-                } catch (e) { /* ignore */ }
-            }
+            camposParaDesativar.forEach(nome => lockField(formElements[nome]));
             if (fotoWrapper) fotoWrapper.classList.remove('hidden');
         } else {
-            formElements['status_compra'].value = 'Não iniciado';
-            camposParaDesativar.forEach(nome => {
-                if (formElements[nome]) {
-                    formElements[nome].disabled = false;
-                    formElements[nome].classList.remove("bg-gray-200", ":root.dark:bg-gray-700");
-                }
-            });
+            if (formElements['status_compra']) {
+                formElements['status_compra'].value = 'Nao iniciado';
+            }
+            if (formElements['fornecedorId']) {
+                formElements['fornecedorId'].classList.remove("bg-gray-200", "cursor-not-allowed");
+            }
+            camposParaDesativar.forEach(nome => unlockField(formElements[nome]));
             form.dataset.retiradaEstoque = 'false';
             if (formElements['retirada_estoque']) formElements['retirada_estoque'].value = '';
-            if (formElements['numero_nf']) {
-                formElements['numero_nf'].required = true;
-                try {
-                    const nfInput = formElements['numero_nf'];
-                    const labelEl = nfInput?.closest('div')?.querySelector('label');
-                    if (labelEl && nfInput.dataset.origLabel) {
-                        labelEl.textContent = nfInput.dataset.origLabel;
-                        delete nfInput.dataset.origLabel;
-                    }
-                } catch (e) { /* ignore */ }
-            }
             if (fotoWrapper) fotoWrapper.classList.add('hidden');
             if (fotoInput) fotoInput.value = '';
         }
@@ -282,6 +315,9 @@ export const UIForms = {
         }
         assignValue(form.obra_pai_os, obra.obra_pai_os || '');
 
+        // Novo campo: Apelido
+        if (form.apelido) assignValue(form.apelido, obra.apelido || '');
+
         const isDiretor = state.currentUser?.role === 'diretor';
         if (form.valor_orcado) form.valor_orcado.disabled = !isDiretor;
         if (form.tolerancia_percentual) form.tolerancia_percentual.disabled = !isDiretor;
@@ -289,14 +325,17 @@ export const UIForms = {
         obraEditModal.showModal();
     },
 
-    showCompraEditModal: async (compraId) => {
+    showCompraEditModal: async (compraId, readonly = false) => {
         const compra = await Data.getDocById("compras", compraId);
         if (!compra) { UI.showToast("Compra não encontrada.", true); return; }
 
         const form = $('form-edit-compra');
         const compraEditModal = $('compraEditModal');
         await UIForms.refreshFormDropdowns('form-edit-compra');
-        form.obraId.innerHTML = state.cache.obras.map(o => `<option value="${o.id}">${Utils.escapeHtml(o.nome_obra)}${o.numero_os ? ` (${Utils.escapeHtml(o.numero_os)})` : ''}</option>`).join('');
+        if (form?.obraId) {
+            form.obraId.innerHTML = state.cache.obras.map(o => `<option value="${o.id}">${Utils.escapeHtml(o.nome_obra)}${o.numero_os ? ` (${Utils.escapeHtml(o.numero_os)})` : ''}</option>`).join('');
+        }
+        UIForms.setFormReadonly(form, false);
 
         const setValue = (field, value = '') => {
             if (!field) return;
@@ -309,15 +348,17 @@ export const UIForms = {
         setValue(form.fornecedorId, compra.fornecedorId);
         setValue(form.compradorId, compra.compradorId);
         setValue(form.numero_nf, compra.numero_nf);
+        setValue(form.apelido_compra, compra.apelido_compra);
+        setValue(form.data_solicitacao, compra.data_solicitacao);
         setValue(form.data_emissao, compra.data_emissao);
         setValue(form.valor_total, Utils.formatCurrencyInput(compra.valor_total || 0, true));
         setValue(form.natureza_compra, compra.natureza_compra);
-        setValue(form.previsao_entrega, compra.previsao_entrega || 'N/D');
-        setValue(form.status_compra, compra.status_compra || 'Não iniciado');
-        setValue(form.data_recebimento, compra.data_recebimento || 'N/D');
+        setValue(form.previsao_entrega, compra.previsao_entrega || '');
+        setValue(form.status_compra, compra.status_compra || 'Nao iniciado');
+        setValue(form.data_recebimento, compra.data_recebimento || '');
         setValue(form.solicitante, compra.solicitante || '');
-
         setValue(form.status_aprovacao, compra.status_aprovacao || 'Aprovado');
+
         const isDiretor = state.currentUser?.role === 'diretor';
         if (form.status_aprovacao) form.status_aprovacao.disabled = !isDiretor;
 
@@ -339,7 +380,10 @@ export const UIForms = {
         if (form.numero_nf && compra.retirada_estoque) {
             form.numero_nf.required = false;
             const labelEl = form.numero_nf.closest('div')?.querySelector('label');
-            if (labelEl) labelEl.textContent = 'Numero NF-e (opcional)';
+            if (labelEl) labelEl.textContent = 'Número NF-e (opcional)';
+        } else if (form.numero_nf) {
+            const labelEl = form.numero_nf.closest('div')?.querySelector('label');
+            if (labelEl) labelEl.textContent = 'Número NF-e *';
         }
         const checkRetirada = form.retirada_estoque;
         if (checkRetirada) {
@@ -347,37 +391,26 @@ export const UIForms = {
             checkRetirada.value = compra.retirada_estoque ? 'on' : '';
             UIForms.toggleEstoqueMode(form, checkRetirada.checked);
         }
+
+        if (form.nf_conferida) {
+            form.nf_conferida.checked = !!compra.nf_conferida;
+        }
+        setValue(form.nf_conferida_por, compra.nf_conferida_por || '');
+        setValue(form.nf_conferida_em, compra.nf_conferida_em || '');
+
         // Oculta os cartões de KPI no modo edição
         const resumoGrid = $('edit-orcamento-resumo');
         if (resumoGrid) resumoGrid.classList.add('hidden');
 
-        const checkConferida = $('edit-nf_conferida');
-        const inputConferidaPor = $('edit-nf_conferida_por');
-        const inputConferidaEm = $('edit-nf_conferida_em');
-        if (checkConferida && inputConferidaPor && inputConferidaEm) {
-            if (compra.nf_conferida) {
-                checkConferida.checked = true;
-                inputConferidaPor.value = compra.nf_conferida_por || 'N/D';
-                inputConferidaEm.value = compra.nf_conferida_em ? new Date(compra.nf_conferida_em.seconds * 1000).toLocaleString('pt-BR') : 'N/D';
-            } else {
-                checkConferida.checked = false;
-                inputConferidaPor.value = '';
-                inputConferidaEm.value = '';
-            }
+        if (readonly) {
+            UIForms.setFormReadonly(form, true);
         }
+        const saveBtn = form.querySelector('button[type="submit"]');
+        if (saveBtn) saveBtn.classList.toggle('hidden', readonly);
+        const cancelBtn = form.querySelector('button[type="button"]');
+        if (cancelBtn) cancelBtn.textContent = readonly ? 'Fechar' : 'Cancelar';
 
         compraEditModal.showModal();
-        await UIDashboard.updateOrcamentoResumo('edit', compra.obraId, compraId);
-    },
-
-    showCompradorEditModal: (id) => {
-        const item = state.cache.compradores.find(i => i.id === id); if (!item) return;
-        const form = $('form-edit-comprador');
-        const compradorEditModal = $('compradorEditModal');
-        form.id.value = item.id;
-        form.nome.value = item.nome;
-        form.email.value = item.email || 'N/D';
-        compradorEditModal.showModal();
     },
 
     showFornecedorEditModal: (id) => {
@@ -452,3 +485,4 @@ export const UIForms = {
         }
     }
 };
+

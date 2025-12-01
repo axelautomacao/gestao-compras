@@ -72,7 +72,9 @@ export const Auth = {
                 reject(error);
             });
         });
-    }, getUserProfile: async (user) => {
+    },
+
+    getUserProfile: async (user) => {
         try {
             const uid = user.uid;
             const userDoc = await getDoc(doc(db, "usuarios", uid));
@@ -148,7 +150,65 @@ export const Auth = {
         await sendPasswordResetEmail(auth, email);
         await logAuditoria('password-reset-sent', { email }, null);
         // Sucesso! O app.js mostrará a mensagem
+    },
+
+    playLoginAnimation: () => {
+        return new Promise((resolve) => {
+            const loader = document.getElementById('loader');
+            const logoContainer = document.getElementById('logo-container');
+            // O main-layout é o container principal que tem a classe dashboard-content
+            const appContent = document.getElementById('main-layout');
+
+            if (!loader || !logoContainer || !appContent) {
+                console.warn('Elementos da animação não encontrados.');
+                // Fallback: garante que o app apareça
+                if (appContent) {
+                    appContent.classList.remove('hidden');
+                    appContent.classList.add('dashboard-visible');
+                }
+                if (loader) loader.classList.add('hidden');
+                resolve();
+                return;
+            }
+
+            // Resetar estados
+            loader.classList.remove('loader-hidden', 'hidden');
+            appContent.classList.remove('dashboard-visible');
+            // Garante que hidden esteja lá inicialmente se o CSS não cobrir
+            // appContent.classList.add('hidden'); 
+
+            logoContainer.classList.remove('anim-enter', 'anim-pulse', 'anim-exit');
+            logoContainer.style.opacity = '0';
+
+            // FASE 1: Entrada
+            setTimeout(() => {
+                logoContainer.classList.add('anim-enter');
+            }, 100);
+
+            // FASE 2: Pulsar
+            setTimeout(() => {
+                logoContainer.classList.remove('anim-enter');
+                logoContainer.classList.add('anim-pulse');
+            }, 900);
+
+            // FASE 3: Saída
+            setTimeout(() => {
+                logoContainer.classList.remove('anim-pulse');
+                logoContainer.classList.add('anim-exit');
+            }, 2500);
+
+            // FASE 4: Finalizar
+            setTimeout(() => {
+                loader.classList.add('loader-hidden');
+
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    appContent.classList.remove('hidden'); // Remove hidden do layout
+                    appContent.classList.add('dashboard-visible'); // Fade in
+                    resolve();
+                }, 500);
+
+            }, 3000);
+        });
     }
 };
-
-

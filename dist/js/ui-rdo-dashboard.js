@@ -75,7 +75,18 @@ export async function renderRdoDashboard(obra, barChartToUpdate) {
                         labels: ['Horas Normais', 'Horas Extras'],
                         datasets: [{ data: [totalHorasNormais, data.totalHorasExtras], backgroundColor: ['#3b82f6', '#f97316'] }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            datalabels: {
+                                display: true,
+                                color: '#111827',
+                                formatter: (val) => `${(val || 0).toFixed(1)}h`
+                            }
+                        }
+                    }
                 });
             }
             

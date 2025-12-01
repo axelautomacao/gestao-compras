@@ -33,8 +33,8 @@ export const UI = {
     ...UIReports,
 
     showCompraDetails: async (compraId) => {
-        // Aproveita o modal de edição para visualizar (modo leitura seria um extra futuro)
-        await UIForms.showCompraEditModal(compraId);
+        // Aproveita o modal de edição para visualizar (modo leitura)
+        await UIForms.showCompraEditModal(compraId, true);
     },
 
     handleCalendarFilterChange: () => {
@@ -52,7 +52,10 @@ export const UI = {
     // (Item 3): Lógica do Tema
     initTheme: () => {
         const theme = localStorage.getItem('theme') || 'system';
-        $('select-theme').value = theme;
+        const select = $('select-theme');
+        if (select) {
+            select.value = theme;
+        }
         UI.applyTheme(theme);
     },
 
@@ -70,13 +73,10 @@ export const UI = {
     renderNav: () => {
         const role = state.currentUser?.role || 'obra';
 
-        // A 'role' 'administrador' tem acesso a tudo que o 'diretor' tem
-        const roles = ['obra', 'comprador', 'financeiro', 'diretor'];
-        if (role === 'administrador') {
-            roles.push('administrador');
-        } else {
-            roles.push(role);
-        }
+        // Apenas as roles efetivamente permitidas (admin herda tudo)
+        const roles = role === 'administrador'
+            ? ['administrador', 'diretor', 'financeiro', 'comprador', 'obra']
+            : [role];
 
         const allNavButtons = [
             { id: 'dashboard-geral', label: 'Dashboard Geral', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12A2.25 2.25 0 0020.25 14.25V3M3.75 3l-1.5 1.5M3.75 3h16.5M12 3c0 1.657-1.343 3-3 3S6 4.657 6 3m6 0c0 1.657 1.343 3 3 3s3-1.343 3-3m-3.75 6.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>`, roles: ['diretor', 'financeiro'] },
@@ -117,21 +117,28 @@ export const UI = {
 
     // (Item 1 e 2): Lida com as novas páginas
     showPage: (pageId) => {
-        if (state.currentPage !== pageId) {
+        const targetPage = document.getElementById(`page-${pageId}`);
+        const safePageId = targetPage ? pageId : 'dashboard-geral';
+
+        if (state.currentPage !== safePageId) {
             state.previousPage = state.currentPage;
         }
 
-        state.currentPage = pageId;
-        pages.forEach(page => page.classList.toggle('active', page.id === `page-${pageId}`));
+        state.currentPage = safePageId;
+        pages.forEach(page => {
+            const isActive = page.id === `page-${safePageId}`;
+            page.classList.toggle('active', isActive);
+            page.style.display = isActive ? 'block' : 'none';
+        });
         UI.renderNav();
 
         // Limpa o listener de dashboard da obra se sairmos da página
-        if (pageId !== 'dashboard' && state.listeners.dashboardCompras) {
+        if (safePageId !== 'dashboard' && state.listeners.dashboardCompras) {
             state.listeners.dashboardCompras(); // Executa a função de unsubscribe
             state.listeners.dashboardCompras = null;
         }
 
-        if (pageId !== 'dashboard') {
+        if (safePageId !== 'dashboard') {
             const refreshBtn = $('btn-dashboard-refresh');
             const analysisTitle = $('dashboard-analysis-title');
             const editBtn = $('btn-dashboard-edit');
@@ -140,7 +147,7 @@ export const UI = {
             editBtn?.classList.add('hidden');
         }
 
-        if (pageId !== 'registro' && pageId !== 'relatorio-compras') {
+        if (safePageId !== 'registro' && safePageId !== 'relatorio-compras') {
             state.currentOrcamentoResumo = null;
         }
 
@@ -151,27 +158,27 @@ export const UI = {
         }
 
         // Funções de renderização de página
-        if (pageId === 'dashboard-geral') UI.renderDashboardGeral();
-        if (pageId === 'dashboard') {
+        if (safePageId === 'dashboard-geral') UI.renderDashboardGeral();
+        if (safePageId === 'dashboard') {
             UI.updateDashboardObraList();
             if (state.currentObraId) {
                 UI.renderDashboardStats(state.currentObraId);
             }
         }
 
-        if (pageId === 'registro') UI.renderRegistroPage();
-        if (pageId === 'relatorio-compras') UI.renderRelatorioComprasPage();
-        if (pageId === 'relatorios-fornecedor') UI.renderRelatoriosFornecedorPage();
+        if (safePageId === 'registro') UI.renderRegistroPage();
+        if (safePageId === 'relatorio-compras') UI.renderRelatorioComprasPage();
+        if (safePageId === 'relatorios-fornecedor') UI.renderRelatoriosFornecedorPage();
 
         // (Item 1): Renderiza as novas páginas
-        if (pageId === 'cadastro-obras') UI.renderObrasPage(); // Reutiliza a função
-        if (pageId === 'cadastro-compradores') UI.refreshCadastroLists();
-        if (pageId === 'cadastro-fornecedores') UI.refreshCadastroLists();
-        if (pageId === 'cadastro-centros-custo') UI.refreshCadastroLists();
+        if (safePageId === 'cadastro-obras') UI.renderObrasPage(); // Reutiliza a função
+        if (safePageId === 'cadastro-compradores') UI.refreshCadastroLists();
+        if (safePageId === 'cadastro-fornecedores') UI.refreshCadastroLists();
+        if (safePageId === 'cadastro-centros-custo') UI.refreshCadastroLists();
 
         // (Item 2): Renderiza a página de Configurações
-        if (pageId === 'configuracoes') {
-            // (A lógica de carregar utilizadores virá depois)
+        if (safePageId === 'configuracoes') {
+            UI.renderConfiguracoesPage();
         }
     },
 
@@ -209,6 +216,317 @@ export const UI = {
         const roleTop = $('user-role-top');
         if (nameTop) nameTop.textContent = state.currentUser?.nome || 'Usuário';
         if (roleTop) roleTop.textContent = state.currentUser?.role || '-';
+    },
+
+    // Configurações (Notificações e Usuários)
+    getDefaultNotificationPrefs: () => ({
+        channels: { toast: true, email: false, push: false },
+        events: { atraso: true, sla: true, orcamento: true, rdo: false },
+        thresholds: { diasAtraso: 1, percentGasto: 90 },
+        frequency: 'imediato'
+    }),
+
+    loadNotificationPrefs: () => {
+        if (!state.notificationPrefs) {
+            const raw = localStorage.getItem('axel_notif_prefs');
+            if (raw) {
+                try {
+                    state.notificationPrefs = JSON.parse(raw);
+                } catch {
+                    state.notificationPrefs = UI.getDefaultNotificationPrefs();
+                }
+            } else {
+                state.notificationPrefs = UI.getDefaultNotificationPrefs();
+            }
+        }
+        return state.notificationPrefs;
+    },
+
+    saveNotificationPrefs: (prefs) => {
+        state.notificationPrefs = prefs;
+        localStorage.setItem('axel_notif_prefs', JSON.stringify(prefs));
+    },
+
+    ensureNotificationPrefs: async () => {
+        const defaults = UI.getDefaultNotificationPrefs();
+        let prefs = UI.loadNotificationPrefs();
+        if (state.currentUser?.uid) {
+            try {
+                const remote = await Data.getNotificationPrefs(state.currentUser.uid);
+                if (remote) {
+                    prefs = remote;
+                } else {
+                    await Data.saveNotificationPrefs(state.currentUser.uid, prefs || defaults);
+                }
+            } catch (err) {
+                console.warn('Não foi possível carregar/salvar prefs remotas:', err);
+            }
+        }
+        state.notificationPrefs = prefs || defaults;
+        UI.saveNotificationPrefs(state.notificationPrefs);
+    },
+
+    renderNotificationForm: () => {
+        const prefs = UI.loadNotificationPrefs();
+        const setChecked = (id, val) => { const el = $(id); if (el) el.checked = !!val; };
+        setChecked('notif-channel-toast', prefs.channels.toast);
+        setChecked('notif-channel-email', prefs.channels.email);
+        setChecked('notif-channel-push', prefs.channels.push);
+        setChecked('notif-event-atraso', prefs.events.atraso);
+        setChecked('notif-event-sla', prefs.events.sla);
+        setChecked('notif-event-orcamento', prefs.events.orcamento);
+        setChecked('notif-event-rdo', prefs.events.rdo);
+        const dias = $('notif-threshold-atraso');
+        const perc = $('notif-threshold-percent');
+        if (dias) dias.value = prefs.thresholds.diasAtraso;
+        if (perc) perc.value = prefs.thresholds.percentGasto;
+        const freq = $('notif-frequency');
+        if (freq) freq.value = prefs.frequency;
+    },
+
+    bindNotificationHandlers: () => {
+        $('notif-save-btn')?.addEventListener('click', async () => {
+            const prefs = {
+                channels: {
+                    toast: $('notif-channel-toast')?.checked || false,
+                    email: $('notif-channel-email')?.checked || false,
+                    push: $('notif-channel-push')?.checked || false
+                },
+                events: {
+                    atraso: $('notif-event-atraso')?.checked || false,
+                    sla: $('notif-event-sla')?.checked || false,
+                    orcamento: $('notif-event-orcamento')?.checked || false,
+                    rdo: $('notif-event-rdo')?.checked || false
+                },
+                thresholds: {
+                    diasAtraso: Number($('notif-threshold-atraso')?.value || 1),
+                    percentGasto: Number($('notif-threshold-percent')?.value || 90)
+                },
+                frequency: $('notif-frequency')?.value || 'imediato'
+            };
+            try {
+                if (state.currentUser?.uid) {
+                    await Data.saveNotificationPrefs(state.currentUser.uid, prefs);
+                }
+                UI.saveNotificationPrefs(prefs);
+                UI.showToast('Preferências de notificação salvas.', 'success', 2500);
+            } catch (err) {
+                console.error('Erro ao salvar prefs remotas', err);
+                UI.showToast('Não foi possível salvar as preferências (Firestore).', 'error', 3000);
+            }
+        });
+
+        $('notif-test-btn')?.addEventListener('click', () => {
+            NotificationManager.show('Teste de notificação: canal ativo.', 'info', 3000);
+        });
+
+        $('notif-reset-btn')?.addEventListener('click', () => {
+            const defaults = UI.getDefaultNotificationPrefs();
+            UI.saveNotificationPrefs(defaults);
+            UI.renderNotificationForm();
+            UI.showToast('Preferências resetadas para o padrão.', 'info', 2500);
+        });
+    },
+
+    renderUsersTable: () => {
+        const tbody = $('config-users-body');
+        if (!tbody) return;
+        const users = state.usersCache?.length ? state.usersCache : (state.currentUser ? [state.currentUser] : []);
+        if (!users.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-3 py-2 text-center text-gray-400">Nenhum usuário cadastrado.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = users.map(u => `
+            <tr>
+                <td class="px-3 py-2 text-sm text-gray-900">${Utils.escapeHtml(u.nome || 'Usuário')}</td>
+                <td class="px-3 py-2 text-sm text-gray-600">${Utils.escapeHtml(u.email || '')}</td>
+                <td class="px-3 py-2 text-sm text-gray-600">${Utils.escapeHtml(u.role || 'obra')}</td>
+                <td class="px-3 py-2 text-sm text-right">
+                    <button class="btn-secondary btn-small" data-action="edit-user" data-id="${Utils.escapeHtml(u.uid || u.id || '')}">Editar</button>
+                    <button class="btn-secondary btn-small" data-action="delete-user" data-id="${Utils.escapeHtml(u.uid || u.id || '')}">Excluir</button>
+                </td>
+            </tr>
+        `).join('');
+    },
+
+    bindUserConfigHandlers: () => {
+        $('config-add-user')?.addEventListener('click', () => {
+            UI.openUserModal(null);
+        });
+        $('config-refresh-users')?.addEventListener('click', async () => {
+            await UI.reloadUsers();
+        });
+        $('config-users-body')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+            const id = btn.dataset.id;
+            if (!id) return;
+            const user = state.usersCache.find(u => (u.uid || u.id) === id);
+            if (btn.dataset.action === 'edit-user') {
+                UI.openUserModal(user || null);
+            } else if (btn.dataset.action === 'delete-user') {
+                await UI.handleDeleteUser(user || { id });
+            }
+        });
+
+        $('btnUserModalClose')?.addEventListener('click', UI.closeUserModal);
+        $('btnUserCancel')?.addEventListener('click', UI.closeUserModal);
+        $('form-user-modal')?.addEventListener('submit', UI.handleSaveUser);
+        $('btnUserDelete')?.addEventListener('click', async () => {
+            const id = $('user-id')?.value || $('user-uid')?.value;
+            const user = state.usersCache.find(u => (u.uid || u.id) === id);
+            await UI.handleDeleteUser(user || { id });
+        });
+    },
+
+    renderConfiguracoesPage: async () => {
+        await UI.ensureNotificationPrefs();
+        UI.renderNotificationForm();
+        UI.bindNotificationHandlers();
+
+        // Carregar usuários (admin/diretor)
+        const role = state.currentUser?.role || '';
+        if (role === 'administrador' || role === 'diretor') {
+            try {
+                state.usersCache = await Data.listUsers();
+            } catch (err) {
+                console.warn('Não foi possível carregar usuários:', err);
+                state.usersCache = state.usersCache || [];
+            }
+        }
+        UI.renderUsersTable();
+        UI.bindUserConfigHandlers();
+    },
+
+    reloadUsers: async () => {
+        const role = state.currentUser?.role || '';
+        if (role === 'administrador' || role === 'diretor') {
+            try {
+                state.usersCache = await Data.listUsers();
+            } catch (err) {
+                UI.showToast('Não foi possível carregar usuários.', 'error', 3000);
+            }
+        }
+        UI.renderUsersTable();
+    },
+
+    openUserModal: (user) => {
+        const dlg = document.getElementById('userModal');
+        if (!dlg) return;
+        const obras = state.cache.obras || [];
+        const obraSelect = $('user-obra');
+        if (obraSelect) {
+            obraSelect.innerHTML = `<option value=\"\">-- Nenhuma --</option>` + obras.map(o => `<option value="${o.id}">${Utils.escapeHtml(o.nome_obra)} (${Utils.escapeHtml(o.numero_os || '')})</option>`).join('');
+        }
+
+        const isEdit = !!(user && (user.id || user.uid));
+        $('userModalTitle').textContent = isEdit ? 'Editar Usuário' : 'Novo Usuário';
+        $('btnUserDelete').style.display = isEdit ? 'inline-flex' : 'none';
+
+        $('user-id').value = user?.uid || user?.id || '';
+        $('user-uid').value = user?.uid || user?.id || '';
+        $('user-nome').value = user?.nome || '';
+        $('user-email').value = user?.email || '';
+        $('user-role').value = user?.role || 'obra';
+        if (obraSelect) obraSelect.value = user?.obraPadrao || '';
+        $('user-ativo').checked = user?.ativo !== false;
+
+        dlg.showModal();
+    },
+
+    closeUserModal: () => {
+        const dlg = document.getElementById('userModal');
+        dlg?.close();
+    },
+
+    handleSaveUser: async (e) => {
+        e.preventDefault();
+        const role = state.currentUser?.role || '';
+        if (role !== 'administrador' && role !== 'diretor') {
+            UI.showToast('Apenas diretores/administradores podem editar usuários.', 'error', 3000);
+            return;
+        }
+        const errorEl = $('user-modal-error');
+        if (errorEl) errorEl.textContent = '';
+        const id = $('user-uid').value.trim();
+        const nome = $('user-nome').value.trim();
+        const email = $('user-email').value.trim();
+        if (!id || !nome) {
+            if (errorEl) errorEl.textContent = 'UID e Nome são obrigatórios.';
+            UI.showToast('Informe UID e Nome.', 'error', 2500);
+            return;
+        }
+        if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            if (errorEl) errorEl.textContent = 'E-mail inválido.';
+            UI.showToast('E-mail inválido.', 'error', 2500);
+            return;
+        }
+        const userRole = $('user-role').value || 'obra';
+        const obraPadrao = $('user-obra').value || null;
+        const ativo = $('user-ativo').checked;
+
+        // Proteção: evitar remover último admin/diretor (demover)
+        const isDemotingAdmin = (() => {
+            const target = state.usersCache.find(u => (u.uid || u.id) === id);
+            const wasAdmin = target && (target.role === 'diretor' || target.role === 'administrador');
+            const willBeAdmin = userRole === 'diretor' || userRole === 'administrador';
+            if (wasAdmin && !willBeAdmin) {
+                const countAdmins = state.usersCache.filter(u => (u.role === 'diretor' || u.role === 'administrador')).length;
+                return countAdmins <= 1;
+            }
+            return false;
+        })();
+        if (isDemotingAdmin) {
+            UI.showToast('Não é possível remover o último diretor/administrador.', 'error', 3500);
+            return;
+        }
+
+        try {
+            const payload = {
+                id,
+                nome,
+                email,
+                role: userRole,
+                obraPadrao,
+                ativo
+            };
+            await Data.provisionUserAuth(payload);
+            await Data.saveUserProfile(payload);
+            await UI.reloadUsers();
+            UI.showToast('Usuário salvo.', 'success', 2500);
+            UI.closeUserModal();
+        } catch (err) {
+            console.error('Erro ao salvar usuário', err);
+            UI.showToast('Erro ao salvar usuário.', 'error', 3000);
+        }
+    },
+
+    handleDeleteUser: async (user) => {
+        const role = state.currentUser?.role || '';
+        if (role !== 'administrador' && role !== 'diretor') {
+            UI.showToast('Apenas diretores/administradores podem excluir usuários.', 'error', 3000);
+            return;
+        }
+        const id = user?.uid || user?.id;
+        if (!id) return;
+        const isAdmin = user?.role === 'diretor' || user?.role === 'administrador';
+        const adminsCount = state.usersCache.filter(u => u.role === 'diretor' || u.role === 'administrador').length;
+        if (isAdmin && adminsCount <= 1) {
+            UI.showToast('Não é possível excluir o último diretor/administrador.', 'error', 3500);
+            return;
+        }
+        if (!confirm('Confirmar exclusão do usuário?')) return;
+        try {
+            await Data.deleteUserRemote(id);
+            await Data.deleteUserProfile(id);
+            state.usersCache = state.usersCache.filter(u => (u.uid || u.id) !== id);
+            UI.renderUsersTable();
+            UI.showToast('Usuário excluído.', 'success', 2000);
+            UI.closeUserModal();
+        } catch (err) {
+            console.error('Erro ao excluir usuário', err);
+            UI.showToast('Erro ao excluir usuário.', 'error', 3000);
+        }
     },
 
     populateContextSelector: () => {

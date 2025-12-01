@@ -110,3 +110,43 @@ Sugestão de Exclusão/Adição
 - Adicionar: Página "Central de Aprovações" (diretores aprovam compras pendentes em lote).
 
 Status geral: fases 0, 1, 2 e 3 entregues; fase 4 iniciada (sidebar colapsável). Pendências principais: responsividade das tabelas, Curva S com calendário real, drag-and-drop no Kanban e eventual Central de Aprovações.
+
+Configurações – Notificações e Usuários (novo)
+----------------------------------------------
+Ordem de impacto (1 = mais impactante):
+1) Notificações de atraso/SLA/orçamento  
+   - Canais: toast no app (sempre), e-mail, push (quando houver token).  
+   - Eventos: compras atrasadas, SLA abaixo do alvo, % gasto acima do limite, RDO ausente.  
+   - Thresholds: dias de atraso, alvo de SLA, limite de % gasto.  
+   - Frequência: imediato ou resumo diário.  
+   - Botão “Enviar notificação de teste”.  
+   - Persistência: localStorage + Firestore em `settings/{userId}/prefs` (quando disponível).
+2) Gestão de usuários (admin)  
+   - Listagem filtrável por nome/e-mail/role; ações criar, editar, ativar/desativar.  
+   - Campos: nome, e-mail, role (diretor/comprador/obra/financeiro), obra padrão, status ativo.  
+   - Restrições: impedir remover último admin/diretor e a si mesmo.  
+   - Integração futura com claims Auth; perfil na coleção `usuarios`.
+3) Segurança e governança  
+   - Regras Firestore: leitura própria e admin; escrita de prefs pelo próprio; edição de usuários apenas admin.  
+   - Log de alterações (coleção `logs`).
+4) UX da aba Configurações  
+   - Cards separados: “Notificações” e “Usuários”.  
+   - Estados vazios amigáveis e feedback de salvamento/erro.  
+   - Badge de notificações permanece; indicador de prefs customizadas.
+
+Home / Dashboard Geral (novo)
+-----------------------------
+- Objetivo: ser a página inicial adaptada por perfil, com informações de maior impacto para a ação rápida.
+- Diretor/Administrador:
+  - KPIs: total compras, atrasos, pendentes de aprovação, % orçamento consumido (consolidado), economia/savings.
+  - Alertas: obras sem datas, estouro de orçamento, curva S fora da banda, backlog de aprovação.
+- Comprador:
+  - KPIs: compras não iniciadas, em cotação, pendentes de aprovação, atrasadas, com prazo próximo.
+  - Alertas: cotações paradas >X dias, pedidos sem previsão, NF ausente.
+- Obra (engenheiro):
+  - KPIs: orçamento vs comprometido da obra atual, compras atrasadas, entregas da semana, RDO previsto x executado.
+  - Alertas: obra sem datas, RDO ausente em dias úteis, consumo > limite.
+- Financeiro:
+  - KPIs: gastos do mês, previstos vs realizados, pendências de pagamento, NF faltantes.
+- Componentes transversais:
+  - Banner de alertas críticos, timeline semanal (entregas/recebimentos), quick actions por perfil, filtro de contexto/período.

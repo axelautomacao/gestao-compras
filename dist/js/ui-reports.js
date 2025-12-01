@@ -17,10 +17,25 @@ const normalizeStatus = (s = '') => {
 
 export const UIReports = {
     renderRelatorioComprasPage: () => {
-        const renderMultiSelect = (elId, data, formatter) => { $(elId).innerHTML = data.map(formatter).join(''); };
+        const renderMultiSelect = (elId, data, formatter) => {
+            const el = $(elId);
+            if (el) el.innerHTML = data.map(formatter).join('');
+        };
+        const renderSingleSelect = (elId, data, formatter) => {
+            const el = $(elId);
+            if (el) el.innerHTML = '<option value="">-- Todos --</option>' + data.map(formatter).join('');
+        };
+
+        // Filtros inferiores (Multi-select)
         renderMultiSelect('report-filter-obra', state.cache.obras, o => `<option value="${o.id}">${Utils.escapeHtml(o.nome_obra)}</option>`);
         renderMultiSelect('report-filter-fornecedor', state.cache.fornecedores, f => `<option value="${f.id}">${Utils.escapeHtml(f.nome)}</option>`);
         renderMultiSelect('report-filter-comprador', state.cache.compradores, c => `<option value="${c.id}">${Utils.escapeHtml(c.nome)}</option>`);
+
+        // Filtros superiores (Single-select / Novos IDs)
+        renderSingleSelect('report-filter-fornecedor-top', state.cache.fornecedores, f => `<option value="${f.id}">${Utils.escapeHtml(f.nome)}</option>`);
+        renderSingleSelect('report-filter-comprador-top', state.cache.compradores, c => `<option value="${c.id}">${Utils.escapeHtml(c.nome)}</option>`);
+        renderSingleSelect('report-filter-centrocusto-top', state.cache.centrosCusto || [], c => `<option value="${c.id}">${Utils.escapeHtml(c.nome)}</option>`);
+
         $('report-table-body').innerHTML = `<tr><td colspan="8" class="p-4 text-center text-[var(--text-secondary)]">Use os filtros e clique em "Buscar Compras".</td></tr>`;
         UIReports.toggleReportView('table');
     },

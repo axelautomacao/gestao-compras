@@ -1,8 +1,8 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿<meta charset="UTF-8">
+<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Compras de Obras (Axel v10)</title>
     <!-- Firebase config fallback para execução estática (usado se env.js/env vars não forem injectados) -->
@@ -28,13 +28,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="./images/favicon.png">
+    <link rel='icon' type='image/png' href='./images/favicon.png'>
 
     <!-- Fase 1: Melhorias Visuais -->
-    <link rel="stylesheet" href="./css/phase1-improvements.css">
-    <link rel="stylesheet" href="./css/login-animation.css">
+    <link rel='stylesheet' href='./css/phase1-improvements.css'>
+    <link rel='stylesheet' href='./css/login-animation.css'>
 
-    <link rel="stylesheet" href="./css/main.css">
+    <link rel='stylesheet' href='./css/main.css'>
 </head>
 
 <body class="bg-gray-100 font-poppins">
@@ -45,7 +45,7 @@
     <div id="loader" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center">
         <!-- Container do Logo -->
         <img id="logo-container" src="./images/logo_axel__principal.png" class="w-48 h-auto" />
-        <!-- Fim do Logo -->
+        <!-- Fim do Logo SVG -->
         <p class="mt-4 text-lg font-medium text-gray-700" id="loading-message">Conectando ao banco de dados...</p>
     </div>
 
@@ -132,7 +132,7 @@
     </dialog>
 
     <dialog id="confirmModal" class="p-6 rounded-lg shadow-xl z-50">
-        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ação</h3>
+        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ao</h3>
         <p class="py-4" id="confirmMessage">Você tem certeza?</p>
         <div class="flex justify-end space-x-2">
             <button id="btnConfirmCancel" class="btn-secondary">Cancelar</button>
@@ -247,7 +247,8 @@
                 </label>
             </div>
             <div class="flex justify-between items-center pt-3 border-t">
-                <button type="button" id="btnUserDelete" class="btn-secondary btn-small hidden">Excluir</button>
+                <button type="button" id="btnUserDelete" class="btn-secondary btn-small"
+                    style="display:none;">Excluir</button>
                 <div class="space-x-2">
                     <button type="button" id="btnUserCancel" class="btn-secondary">Cancelar</button>
                     <button type="submit" class="btn">Salvar</button>
@@ -795,14 +796,15 @@
                                         </p>
                                     </div>
                                     <div class="flex gap-2 items-center">
-                                        <button id="btn-calendar-prev" class="btn-secondary btn-small">←</button>
-                                        <button id="btn-calendar-next" class="btn-secondary btn-small">→</button>
-                                        <select id="calendar-filter-type" class="input">
-                                            <option value="all">Tudo</option>
-                                            <option value="compra">Emiss&atilde;oo</option>
-                                            <option value="previsao">Previs&atilde;o</option>
-                                            <option value="recebimento">Recebimento</option>
-                                        </select>
+                                        <button id="btn-calendar-prev" class="btn-secondary btn-small" &larr;/button>
+                                            <button id="btn-calendar-next" class="btn-secondary btn-small"
+                                                &larr;/button>
+                                                <select id="calendar-filter-type" class="input">
+                                                    <option value="all">Tudo</option>
+                                                    <option value="compra">Emiss&atilde;oo</option>
+                                                    <option value="previsao">Previs&atilde;o</option>
+                                                    <option value="recebimento">Recebimento</option>
+                                                </select>
                                     </div>
                                 </div>
                                 <div id="dashboard-calendar" class="w-full h-80 border rounded-lg bg-white"></div>

@@ -22,11 +22,13 @@ const App = {
         const finishInit = (userProfile) => {
             if (initCompleted) return;
             initCompleted = true;
-            const overlay = $('loading-overlay');
-            if (overlay) overlay.style.display = 'none';
+
             if (userProfile) {
                 App.initializeApp_PostLogin(userProfile);
             } else {
+                const loader = $('loader');
+                if (loader) loader.classList.add('hidden');
+
                 App.cleanupOnSignOut();
                 UI.updateUIForRole();
                 UI.showLoginModal('login');
@@ -71,6 +73,9 @@ const App = {
 
     showInitError: (message) => {
         const overlay = $('loading-overlay');
+        const loader = $('loader');
+        const loadingMsg = $('loading-message');
+
         if (overlay) {
             overlay.style.display = 'flex';
             overlay.innerHTML = `
@@ -90,9 +95,17 @@ const App = {
                 try { Auth.handleSignOut?.(); } catch (e) { /* ignore */ }
                 window.location.reload();
             });
-        } else {
-            alert(message);
+            return;
         }
+
+        if (loader) {
+            loader.classList.remove('hidden');
+            loader.style.display = 'flex';
+            if (loadingMsg) loadingMsg.textContent = message;
+            return;
+        }
+
+        alert(message);
     },
 
     // bindAuthEvents agora tem a lógica de UI (try/catch)
@@ -191,9 +204,11 @@ const App = {
         }
     },
 
-    initializeApp_PostLogin: (userProfile) => {
+    initializeApp_PostLogin: async (userProfile) => {
         UI.updateUIForRole();
         App.bindGlobalEvents();
+        // Garantir que prefs de notificação estejam sincronizadas
+        try { await UI.ensureNotificationPrefs(); } catch (err) { console.warn('Prefs de notificação não sincronizadas', err); }
 
         Data.listenToCadastros({
             renderObrasPage: UI.renderObrasPage,
@@ -212,7 +227,12 @@ const App = {
             UI.renderDashboardStats(state.currentObraId);
         }
 
-        $('loading-overlay').style.display = 'none';
+        // Garantir tela inicial após login e ocultar demais seções
+        UI.showPage(state.currentPage || 'dashboard-geral');
+        UI.renderDashboardGeral();
+
+        // Toca a animação de entrada
+        await Auth.playLoginAnimation();
     },
 
     cleanupOnSignOut: () => {
@@ -238,13 +258,20 @@ const App = {
     },
 
     bindGlobalEvents: () => {
-        $('navigation').addEventListener('click', (e) => {
+        const nav = $('navigation');
+        const on = (id, evt, handler) => {
+            const el = $(id);
+            if (el) el.addEventListener(evt, handler);
+        };
+
+        nav?.addEventListener('click', (e) => {
             const pageId = e.target.closest('button')?.dataset.page;
             if (pageId) UI.showPage(pageId);
         });
 
         try {
-            $('select-theme').addEventListener('change', (e) => UI.applyTheme(e.target.value));
+            const themeSelect = $('select-theme');
+            themeSelect?.addEventListener('change', (e) => UI.applyTheme(e.target.value));
         } catch (err) {
             console.warn("Erro ao ligar o listener do tema:", err);
         }
@@ -254,22 +281,22 @@ const App = {
             contextSelect?.addEventListener('change', (e) => UI.applyContextSelection(e.target.value));
             $('btn-toggle-sidebar')?.addEventListener('click', () => {
                 const sidebar = $('sidebar');
-                if (sidebar) sidebar.classList.toggle('-translate-x-full');
+                if (sidebar) {
+                    sidebar.classList.toggle('-translate-x-full');
+                    sidebar.classList.toggle('collapsed');
+                    localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
+                }
             });
+            const sidebarEl = $('sidebar');
+            if (sidebarEl && localStorage.getItem('sidebar-collapsed') === '1') {
+                sidebarEl.classList.add('collapsed');
+            }
             $('view-table-toggle')?.addEventListener('click', () => {
                 UIReports.toggleReportView('table');
                 if (state.reportCompras?.length) UIReports.renderReportTable(state.reportCompras);
             });
             $('view-kanban-toggle')?.addEventListener('click', () => {
                 UIReports.toggleReportView('kanban');
-            });
-            $('btn-report-buscar-bottom')?.addEventListener('click', () => $('btn-report-buscar')?.click());
-            $('btn-notifications')?.addEventListener('click', () => {
-                if (state.dashboardAlertCount > 0) {
-                    UI.showToast(`Há ${state.dashboardAlertCount} compra(s) atrasadas na obra selecionada.`, 'warning', 4000);
-                } else {
-                    UI.showToast('Nenhuma notificação no momento.', 'info', 3000);
-                }
             });
             const globalSearch = $('global-search');
             globalSearch?.addEventListener('keydown', (e) => {
@@ -459,6 +486,9 @@ const App = {
                         const input = $(id);
                         return input ? input.value : '';
                     };
+                    const pushUnique = (arr, val) => {
+                        if (val && !arr.includes(val)) arr.push(val);
+                    };
                     const filters = {
                         dateStart: $('report-filter-date-start')?.value || '',
                         dateEnd: $('report-filter-date-end')?.value || '',
@@ -467,10 +497,15 @@ const App = {
                         obras: getSelected('report-filter-obra'),
                         fornecedores: getSelected('report-filter-fornecedor'),
                         compradores: getSelected('report-filter-comprador'),
+                        centroCusto: safeValue('report-filter-centrocusto-top'),
+                        numeroNf: safeValue('report-filter-numero'),
+                        descricao: safeValue('report-filter-descricao').toLowerCase(),
                         searchText: safeValue('report-search-text').toLowerCase(),
                         sortCol: state.reportSort.col,
                         sortDir: state.reportSort.dir
                     };
+                    pushUnique(filters.fornecedores, safeValue('report-filter-fornecedor-top'));
+                    pushUnique(filters.compradores, safeValue('report-filter-comprador-top'));
                     const compras = await Data.findCompras(filters);
                     UI.renderReportTable(compras);
                 } catch (err) {
@@ -501,18 +536,19 @@ const App = {
         });
 
         $('btnConfirmCancel').addEventListener('click', () => $('confirmModal').close());
-        $('btnClosePdf').addEventListener('click', () => $('pdfModal').close());
-        $('btnEditObraCancel').addEventListener('click', () => $('obraEditModal').close());
-        $('btnEditCompraCancel').addEventListener('click', () => {
-            $('compraEditModal').close();
+        on('btnClosePdf', 'click', () => $('pdfModal')?.close());
+        on('btnEditObraCancel', 'click', () => $('obraEditModal')?.close());
+        on('btnEditCompraCancel', 'click', () => {
+            $('compraEditModal')?.close();
             state.currentOrcamentoResumo = null;
         });
-        $('btnEditCompradorCancel').addEventListener('click', () => $('compradorEditModal').close());
-        $('btnEditFornecedorCancel').addEventListener('click', () => $('fornecedorEditModal').close());
-        $('btnEditCentroCustoCancel').addEventListener('click', () => $('centroCustoEditModal').close());
+        on('btnEditCompradorCancel', 'click', () => $('compradorEditModal')?.close());
+        on('btnEditFornecedorCancel', 'click', () => $('fornecedorEditModal')?.close());
+        on('btnEditCentroCustoCancel', 'click', () => $('centroCustoEditModal')?.close());
 
         try {
-            $('form-obra').addEventListener('submit', async (e) => {
+            const formObra = $('form-obra');
+            if (formObra) formObra.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -526,7 +562,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-fornecedor').addEventListener('submit', async (e) => {
+            const formForn = $('form-fornecedor');
+            if (formForn) formForn.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -540,7 +577,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-centro-custo').addEventListener('submit', async (e) => {
+            const formCC = $('form-centro-custo');
+            if (formCC) formCC.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -554,7 +592,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-comprador').addEventListener('submit', async (e) => {
+            const formComprador = $('form-comprador');
+            if (formComprador) formComprador.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -568,7 +607,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-compra').addEventListener('submit', async (e) => {
+            const formCompra = $('form-compra');
+            if (formCompra) formCompra.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
                 const btn = form.querySelector('button[type="submit"]');
@@ -602,7 +642,8 @@ const App = {
                 }
             });
 
-            $('form-edit-obra').addEventListener('submit', async (e) => {
+            const formEditObra = $('form-edit-obra');
+            if (formEditObra) formEditObra.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -616,7 +657,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-compra').addEventListener('submit', async (e) => {
+            const formEditCompra = $('form-edit-compra');
+            if (formEditCompra) formEditCompra.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target;
                 const btn = form.querySelector('button[type="submit"]');
@@ -641,7 +683,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-comprador').addEventListener('submit', async (e) => {
+            const formEditComprador = $('form-edit-comprador');
+            if (formEditComprador) formEditComprador.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -655,7 +698,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-fornecedor').addEventListener('submit', async (e) => {
+            const formEditFornecedor = $('form-edit-fornecedor');
+            if (formEditFornecedor) formEditFornecedor.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -669,7 +713,8 @@ const App = {
                     UI.setLoadingState(btn, false);
                 }
             });
-            $('form-edit-centro-custo').addEventListener('submit', async (e) => {
+            const formEditCC = $('form-edit-centro-custo');
+            if (formEditCC) formEditCC.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const btn = e.target.querySelector('button[type="submit"]');
                 UI.setLoadingState(btn, true);
@@ -747,27 +792,30 @@ const App = {
             }
         });
 
-        document.querySelector('#page-relatorio-compras thead').addEventListener('click', (e) => {
-            const th = e.target.closest('th');
-            if (!th || !th.dataset.sort) return;
+        const reportHead = document.querySelector('#page-relatorio-compras thead');
+        if (reportHead) {
+            reportHead.addEventListener('click', (e) => {
+                const th = e.target.closest('th');
+                if (!th || !th.dataset.sort) return;
 
-            const newCol = th.dataset.sort;
-            document.querySelectorAll('#page-relatorio-compras thead th[data-sort]').forEach(t => {
-                if (t !== th) t.innerHTML = t.innerHTML.replace(' ^', '').replace(' v', '');
+                const newCol = th.dataset.sort;
+                document.querySelectorAll('#page-relatorio-compras thead th[data-sort]').forEach(t => {
+                    if (t !== th) t.innerHTML = t.innerHTML.replace(' ^', '').replace(' v', '');
+                });
+
+                if (state.reportSort.col === newCol) {
+                    state.reportSort.dir = state.reportSort.dir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.reportSort.col = newCol;
+                    state.reportSort.dir = 'asc';
+                }
+
+                th.innerHTML = th.innerHTML.replace(' ^', '').replace(' v', '');
+                th.innerHTML += state.reportSort.dir === 'asc' ? ' ^' : ' v';
+
+                $('btn-report-buscar')?.click();
             });
-
-            if (state.reportSort.col === newCol) {
-                state.reportSort.dir = state.reportSort.dir === 'asc' ? 'desc' : 'asc';
-            } else {
-                state.reportSort.col = newCol;
-                state.reportSort.dir = 'asc';
-            }
-
-            th.innerHTML = th.innerHTML.replace(' ^', '').replace(' v', '');
-            th.innerHTML += state.reportSort.dir === 'asc' ? ' ^' : ' v';
-
-            $('btn-report-buscar').click();
-        });
+        }
 
         const dashboardHead = document.querySelector('#dashboard-table-head');
         if (dashboardHead) {
@@ -787,13 +835,14 @@ const App = {
             });
         }
 
-        $('dashboard-search-query').addEventListener('keyup', UI.updateDashboardObraList);
-        $('dashboard-status-filter').addEventListener('change', UI.updateDashboardObraList);
-        $('dashboard-obra-select').addEventListener('change', (e) => UI.renderDashboardStats(e.target.value || null));
+        on('dashboard-search-query', 'keyup', UI.updateDashboardObraList);
+        on('dashboard-status-filter', 'change', UI.updateDashboardObraList);
+        on('dashboard-obra-select', 'change', (e) => UI.renderDashboardStats(e.target.value || null));
 
-        $('registro-search-query').addEventListener('keyup', UI.updateRegistroObraList);
-        $('registro-status-filter').addEventListener('change', UI.updateRegistroObraList);
-        $('registro-obra-select').addEventListener('change', (e) => {
+        on('registro-search-query', 'keyup', UI.updateRegistroObraList);
+        on('registro-status-filter', 'change', UI.updateRegistroObraList);
+        const registroObraSelect = $('registro-obra-select');
+        if (registroObraSelect) registroObraSelect.addEventListener('change', (e) => {
             const obraId = e.target.value;
             const formCompra = $('form-compra');
             if (formCompra?.obraId) {
@@ -801,15 +850,19 @@ const App = {
             }
             UI.updateOrcamentoResumo('registro', obraId);
             $('registro-justificativa-wrapper').classList.add('hidden');
-            $('form-compra').justificativa_estouro_orcamento.required = false;
+            const f = $('form-compra');
+            if (f?.justificativa_estouro_orcamento) f.justificativa_estouro_orcamento.required = false;
         });
-        $('form-edit-compra').obraId.addEventListener('change', (e) => {
-            const obraId = e.target.value;
-            const compraId = $('form-edit-compra').id.value;
-            UI.updateOrcamentoResumo('edit', obraId, compraId);
-            $('edit-justificativa-wrapper').classList.add('hidden');
-            $('form-edit-compra').justificativa_estouro_orcamento.required = false;
-        });
+        const formEditCompraEl = $('form-edit-compra');
+        if (formEditCompraEl?.obraId) {
+            formEditCompraEl.obraId.addEventListener('change', (e) => {
+                const obraId = e.target.value;
+                const compraId = formEditCompraEl.id.value;
+                UI.updateOrcamentoResumo('edit', obraId, compraId);
+                $('edit-justificativa-wrapper').classList.add('hidden');
+                formEditCompraEl.justificativa_estouro_orcamento.required = false;
+            });
+        }
 
         const bindObraFilhaToggle = (checkboxId, wrapperId) => {
             const checkbox = $(checkboxId);
@@ -820,9 +873,9 @@ const App = {
             toggle();
         };
         bindObraFilhaToggle('obra-filha-toggle', 'obra-filha-wrapper');
-        bindObraFilhaToggle('obra-edit-filha-toggle', 'obra-edit-filha-wrapper');
+        bindObraFilhaToggle('edit-obra-filha', 'obra-edit-filha-wrapper');
 
-        $('relatorio-fornecedor-select').addEventListener('change', (e) => UI.renderRelatorioFornecedor(e.target.value || null));
+        on('relatorio-fornecedor-select', 'change', (e) => UI.renderRelatorioFornecedor(e.target.value || null));
         $('calendar-filter-type')?.addEventListener('change', () => UI.handleCalendarFilterChange());
         $('btn-calendar-prev')?.addEventListener('click', () => UI.shiftCalendarWindow(-1));
         $('btn-calendar-next')?.addEventListener('click', () => UI.shiftCalendarWindow(1));

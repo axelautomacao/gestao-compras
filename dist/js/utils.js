@@ -49,13 +49,13 @@ export const Utils = {
             return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-600 text-white">ATRASADO</span>`;
         }
 
-        switch (status) {
-            case 'Recebido': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-500 text-white">${status}</span>`;
-            case 'Comprado': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">${status}</span>`;
-            case 'Aprovado': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-500 text-white">${status}</span>`;
-            case 'Em cotação': return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-500 text-gray-800">${status}</span>`;
-            default: return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-400 text-gray-800">${status || 'N/D'}</span>`;
-        }
+        const normalized = (status || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, '');
+        if (normalized.includes('recebido')) return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-500 text-white">${status}</span>`;
+        if (normalized.includes('comprado')) return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-500 text-white">${status}</span>`;
+        if (normalized.includes('aprov')) return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-500 text-white">${status}</span>`;
+        if (normalized.includes('cot')) return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-500 text-gray-800">${status}</span>`;
+        if (normalized.includes('nao') || normalized.includes('não')) return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-500 text-white">${status}</span>`;
+        return `<span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-400 text-gray-800">${status || 'N/D'}</span>`;
     },
 
     formatCurrencyInput: (value, isBlur = false) => {

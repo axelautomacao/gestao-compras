@@ -1,40 +1,457 @@
-﻿﻿<!DOCTYPE html>
+﻿﻿<meta charset="UTF-8">
+<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Compras de Obras (Axel v10)</title>
-    <!-- Firebase config fallback para execução estática (usado se env.js/env vars não forem injectados) -->
-    <meta name="VITE_FIREBASE_API_KEY" content="SUA_API_KEY">
-    <meta name="VITE_FIREBASE_AUTH_DOMAIN" content="seu-projeto.firebaseapp.com">
-    <meta name="VITE_FIREBASE_PROJECT_ID" content="seu-projeto-id">
-    <meta name="VITE_FIREBASE_STORAGE_BUCKET" content="seu-projeto.appspot.com">
-    <meta name="VITE_FIREBASE_MESSAGING_SENDER_ID" content="000000000000">
-    <meta name="VITE_FIREBASE_APP_ID" content="1:000000000000:web:xxxxxxxxxxxxxx">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Compras de Obras (Axel v10)</title>
+<!-- Firebase config fallback para execução estática (usado se env.js/env vars não forem injectados) -->
+<meta name="VITE_FIREBASE_API_KEY" content="SUA_API_KEY">
+<meta name="VITE_FIREBASE_AUTH_DOMAIN" content="seu-projeto.firebaseapp.com">
+<meta name="VITE_FIREBASE_PROJECT_ID" content="seu-projeto-id">
+<meta name="VITE_FIREBASE_STORAGE_BUCKET" content="seu-projeto.appspot.com">
+<meta name="VITE_FIREBASE_MESSAGING_SENDER_ID" content="000000000000">
+<meta name="VITE_FIREBASE_APP_ID" content="1:000000000000:web:xxxxxxxxxxxxxx">
 
-    <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-    <script
-        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.css">
+<script src="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.js"></script>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/png" href="./images/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel='icon' type='image/png' href='./images/favicon.png'>
 
-    <!-- Fase 1: Melhorias Visuais -->
-    <link rel="stylesheet" href="./css/phase1-improvements.css">
-    <link rel="stylesheet" href="./css/login-animation.css">
+<!-- Fase 1: Melhorias Visuais -->
+<link rel='stylesheet' href='./css/phase1-improvements.css'>
+<link rel='stylesheet' href='./css/login-animation.css'>
 
-    <link rel="stylesheet" href="./css/main.css">
+<style>
+    :root {
+        --axel-green: #2E9A45;
+        --axel-green-hover: #257a38;
+        --axel-red: #EF4444;
+        --axel-red-hover: #c82a2a;
+        --axel-gray-text: #374151;
+        --axel-gray-light: #F9FAFB;
+        --axel-gray-border: #E5E7EB;
+
+        /* Cores de Fundo */
+        --bg-primary: #ffffff;
+        --bg-secondary: #F9FAFB;
+        --bg-tertiary: #F3F4F6;
+        --bg-sidebar: #1F2937;
+        --bg-sidebar-hover: #374151;
+        --bg-modal: #ffffff;
+        --bg-input: #ffffff;
+
+        /* Cores de Texto */
+        --text-primary: #374151;
+        --text-secondary: #6B7280;
+        --text-on-sidebar: #D1D5DB;
+        --text-on-sidebar-active: #FFFFFF;
+
+        /* Cores de Borda */
+        --border-color: #E5E7EB;
+    }
+
+    /* Definições do Tema Escuro (Item 10) */
+    :root.dark {
+        --bg-primary: #0f172a;
+        --bg-secondary: #111827;
+        --bg-tertiary: #0b1220;
+
+        --bg-modal: #111827;
+        --bg-input: #1f2937;
+
+        --text-primary: #e2e8f0;
+        --text-secondary: #94a3b8;
+
+        --border-color: #1f2937;
+    }
+
+    html, body {
+        height: 100%;
+    }
+
+    body {
+        font-family: 'Poppins', sans-serif;
+        color: var(--text-primary);
+        background-color: var(--bg-tertiary);
+        margin: 0;
+        padding: 0;
+        /* Aplicando tema */
+        transition: background-color 0.2s, color 0.2s;
+    }
+
+    /* Aplica tema aos cards, modais, inputs, etc. */
+    .card {
+        background-color: var(--bg-primary);
+        border-color: var(--border-color);
+        border-width: 1px;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
+
+    dialog {
+        background-color: var(--bg-modal);
+    }
+
+    .input,
+    .input-group select {
+        background-color: var(--bg-input);
+        color: var(--text-primary);
+        border-color: var(--border-color);
+        min-height: 44px;
+    }
+
+    select.input,
+    textarea.input {
+        min-height: 44px;
+    }
+
+    .input::placeholder {
+        color: var(--text-secondary);
+    }
+
+    .input-group {
+        border-color: var(--border-color);
+    }
+
+    #pdfContainer {
+        background-color: var(--bg-secondary);
+    }
+
+    .orcamento-resumo-grid {
+        background-color: var(--bg-secondary);
+        border-color: var(--border-color);
+    }
+
+    .cadastro-list-item {
+        border-color: var(--border-color);
+    }
+
+    table thead {
+        background-color: var(--bg-secondary);
+    }
+
+    table tbody {
+        border-color: var(--border-color);
+    }
+
+    :root.dark table thead {
+        background-color: #374151;
+    }
+
+    /* Botões */
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        color: white;
+        background-color: var(--axel-green);
+        font-weight: 500;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background-color: var(--axel-green-hover);
+    }
+
+    .btn-secondary {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        background-color: #e5e7eb;
+        color: #374151;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+        background-color: #d1d5db;
+    }
+
+    :root.dark .btn-secondary {
+        background-color: #4B5563;
+        color: #F9FAFB;
+    }
+
+    :root.dark .btn-secondary:hover {
+        background-color: #5a6678;
+    }
+
+    .btn-danger {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        color: white;
+        background-color: var(--axel-red);
+        font-weight: 500;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+
+    .btn-danger:hover {
+        background-color: var(--axel-red-hover);
+    }
+
+    .btn-small {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-link {
+        color: var(--axel-green);
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .btn-link:hover {
+        text-decoration: underline;
+        color: var(--axel-green-hover);
+    }
+
+    .wizard-pill {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .wizard-pill.wizard-active {
+        background: var(--axel-green);
+        color: #ffffff;
+    }
+
+    .btn-shortcut {
+        padding: 0 0.5rem;
+        height: 100%;
+        background-color: #e5e7eb;
+        color: #374151;
+        border-left: 1px solid #d1d5db;
+        font-size: 1.25rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .btn-shortcut:hover {
+        background-color: #d1d5db;
+    }
+
+    :root.dark .btn-shortcut {
+        background-color: #4B5563;
+        color: #F9FAFB;
+        border-left-color: #5a6678;
+    }
+
+    :root.dark .btn-shortcut:hover {
+        background-color: #5a6678;
+    }
+
+    .input-group {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+
+    .input-group:focus-within {
+        border-color: var(--axel-green);
+        box-shadow: 0 0 0 2px rgba(46, 154, 69, 0.4);
+        outline: none;
+    }
+
+    /* Formulários */
+    .input:focus {
+        border-color: var(--axel-green);
+        box-shadow: 0 0 0 2px rgba(46, 154, 69, 0.4);
+        outline: none;
+    }
+
+    .input {
+        width: 100%;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .input.readonly-field,
+    .input[readonly],
+    select.readonly-field,
+    select[aria-readonly="true"],
+    textarea.readonly-field {
+        background-color: #e5e7eb;
+        cursor: not-allowed;
+    }
+
+    :root.dark .input.readonly-field,
+    :root.dark .input[readonly],
+    :root.dark select.readonly-field,
+    :root.dark textarea.readonly-field {
+        background-color: #1f2937;
+    }
+
+    select[multiple].input {
+        height: 10rem;
+        padding: 0;
+    }
+
+    select[multiple].input option {
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Navegação Lateral (Item 4) */
+    .page {
+        display: none !important;
+    }
+
+    .page.active {
+        display: block !important;
+    }
+
+    #sidebar {
+        background-color: var(--bg-sidebar);
+    }
+
+    #main-layout {
+        min-height: 100vh;
+    }
+
+    #sidebar nav {
+        border-top: 1px solid var(--bg-sidebar-hover);
+    }
+
+    #sidebar.collapsed {
+        width: 4.5rem;
+    }
+
+    #sidebar.collapsed .nav-link span {
+        display: none;
+    }
+
+        #sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        #sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding-inline: 0.75rem;
+        }
+
+        /* Garante que modais (dialog) fiquem ocultos quando não abertos */
+        dialog:not([open]) {
+            display: none !important;
+        }
+
+    .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        cursor: pointer;
+        margin-bottom: 0.25rem;
+        color: var(--text-on-sidebar);
+        /* Borda transparente para alinhamento */
+        border-left: 4px solid transparent;
+    }
+
+    .nav-link svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+
+    .nav-link.inactive:hover {
+        background-color: var(--bg-sidebar-hover);
+        color: var(--text-on-sidebar-active);
+    }
+
+    /* Correção do indicador de menu ativo */
+    .nav-link.active {
+        background-color: var(--bg-sidebar-hover);
+        color: var(--text-on-sidebar-active);
+        font-weight: 600;
+        border-left: 4px solid var(--axel-green);
+    }
+
+    /* Outros estilos */
+    dialog::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .cadastro-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.25rem;
+        border-bottom-width: 1px;
+        border-color: var(--border-color);
+    }
+
+    /* Resumo do Orçamento */
+    .orcamento-resumo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1rem;
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #f8fafc, #eef2ff);
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .orcamento-resumo-item {
+        text-align: left;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        padding: 0.9rem 1rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 100px;
+    }
+
+    .orcamento-resumo-item .label {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .orcamento-resumo-item .value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1.6;
+    }
+
+    /* Ocultar elementos por permissão */
+    .protected-role {
+        display: none;
+    }
+</style>
 </head>
 
 <body class="bg-gray-100 font-poppins">
@@ -45,9 +462,21 @@
     <div id="loader" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center">
         <!-- Container do Logo -->
         <img id="logo-container" src="./images/logo_axel__principal.png" class="w-48 h-auto" />
-        <!-- Fim do Logo -->
+        <!-- Fim do Logo SVG -->
         <p class="mt-4 text-lg font-medium text-gray-700" id="loading-message">Conectando ao banco de dados...</p>
     </div>
+
+    <style>
+        /* Ajustes do calendário (timeline) */
+        #dashboard-calendar {
+            width: 100%;
+            height: 360px;
+        }
+
+        .vis-timeline {
+            width: 100%;
+        }
+    </style>
 
     <dialog id="authModal" class="p-0 rounded-lg shadow-xl w-full max-w-sm z-50 overflow-hidden">
 
@@ -132,7 +561,7 @@
     </dialog>
 
     <dialog id="confirmModal" class="p-6 rounded-lg shadow-xl z-50">
-        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ação</h3>
+        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ao</h3>
         <p class="py-4" id="confirmMessage">Você tem certeza?</p>
         <div class="flex justify-end space-x-2">
             <button id="btnConfirmCancel" class="btn-secondary">Cancelar</button>
@@ -247,13 +676,117 @@
                 </label>
             </div>
             <div class="flex justify-between items-center pt-3 border-t">
-                <button type="button" id="btnUserDelete" class="btn-secondary btn-small hidden">Excluir</button>
+                <button type="button" id="btnUserDelete" class="btn-secondary btn-small"
+                    style="display:none;">Excluir</button>
                 <div class="space-x-2">
                     <button type="button" id="btnUserCancel" class="btn-secondary">Cancelar</button>
                     <button type="submit" class="btn">Salvar</button>
                 </div>
             </div>
         </form>
+    </dialog>
+
+    <dialog id="obraEditModal-legacy" class="p-0 rounded-lg shadow-xl w-full max-w-3xl z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Obra</h3>
+            <form id="form-edit-obra-legacy" class="space-y-3">
+                <input type="hidden" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nome da Obra *</label>
+                        <input name="nome_obra" class="input" required />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Número da O.S. *</label>
+                        <input name="numero_os" class="input" required />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Cliente</label>
+                        <input name="cliente" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Orçamento de Materiais (R$)</label>
+                        <input name="valor_orcado" data-mask="currency" class="input" required
+                            data-role-field="diretor" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tolerância (%)</label>
+                        <input name="tolerancia_percentual" type="number" step="0.1" min="0" class="input"
+                            placeholder="Ex: 5" data-role-field="diretor" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Empresa</label>
+                        <input name="empresa" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Local de Realização</label>
+                        <input name="local_realizacao" class="input" />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Descrição da Obra</label>
+                    <textarea name="descricao_obra" rows="2" class="input"
+                        placeholder="Resumo da obra, escopo, etc."></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data Prevista Início</label>
+                        <input name="data_prevista_inicio" type="date" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data Prevista Fim</label>
+                        <input name="data_prevista_fim" type="date" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Horas Previstas</label>
+                        <input name="horas_previstas" type="number" step="0.1" class="input" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Horas Extras Previstas</label>
+                        <input name="horas_extras_previstas" type="number" step="0.1" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valor Deslocamento (Km)</label>
+                        <input name="valor_deslocamento_km" data-mask="currency" class="input" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Qtde Refeições</label>
+                        <input name="qtd_refeicoes" type="number" class="input" />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Qtde Hospedagens</label>
+                        <input name="qtd_hospedagens" type="number" class="input" />
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input id="obra-edit-filha-toggle" type="checkbox" name="is_obra_filha" class="h-4 w-4">
+                        <label for="obra-edit-filha-toggle" class="text-sm text-gray-700">Obra Filha?</label>
+                    </div>
+                    <div id="obra-edit-filha-wrapper" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700">Obra Pai (OS)</label>
+                        <input name="obra_pai_os" class="input" placeholder="Informe a OS da obra pai">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4">
+                    <button type="button" id="btnEditObraCancel" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
     </dialog>
 
     <dialog id="compraEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-3xl z-50">
@@ -297,13 +830,127 @@
                     <input name="apelido_compra" class="input mt-1 w-full" placeholder="Ex.: Compra Painel Lote 1" />
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
-                            class="input" required /></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Código</label><input name="codigo"
-                            class="input" /></div>
-                    <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCentroCustoCancel"
-                            class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
-                            Alterações</button></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data da solicitação</label>
+                        <input name="data_solicitacao" type="date" class="input mt-1" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data de Compra *</label>
+                        <input name="data_emissao" type="date" class="input mt-1" required />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valor Total (R$) *</label>
+                        <input name="valor_total" data-mask="currency" class="input mt-1" required />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Natureza da Compra *</label>
+                        <select name="natureza_compra" class="input mt-1" required>
+                            <option value="Lista de Material inicial">Lista de Material inicial</option>
+                            <option value="Material Adicional">Material Adicional</option>
+                            <option value="Desperdício">Desperdício</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Previsão de Entrega</label><input
+                            name="previsao_entrega" type="date" class="input mt-1" /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Status da Compra *</label>
+                        <select name="status_compra" class="input mt-1" required>
+                            <option value="Nao iniciado">Nao iniciado</option>
+                            <option value="Em cotacao">Em cotacao</option>
+                            <option value="Aprovado">Aprovado</option>
+                            <option value="Comprado">Comprado</option>
+                            <option value="Recebido">Recebido</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700">Data de Recebimento</label><input
+                            name="data_recebimento" type="date" class="input mt-1" /></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Status Aprovação</label>
+                        <select name="status_aprovacao" class="input mt-1" data-role-field="diretor">
+                            <option value="Aprovado">Aprovado</option>
+                            <option value="Pendente">Pendente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="edit-justificativa-wrapper" class="hidden">
+                    <label class="block text-sm font-medium text-red-700">Justificativa de Estouro de Orçamento
+                        *</label>
+                    <textarea name="justificativa_estouro_orcamento" class="input mt-1 w-full" rows="3"
+                        placeholder="Descreva o motivo para ultrapassar o limite de orçamento..."></textarea>
+                </div>
+
+                <div class="border rounded-lg p-3 space-y-2 bg-gray-50">
+                    <h4 class="font-medium text-sm text-gray-800">Auditoria de Anexos</h4>
+                    <div class="flex items-center">
+                        <input id="edit-nf_conferida" name="nf_conferida" type="checkbox"
+                            class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <label for="edit-nf_conferida" class="ml-2 block text-sm text-gray-900">NF-e / CT-e
+                            Conferido</label>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div><label class="block font-medium text-gray-500">Conferido por:</label><input
+                                id="edit-nf_conferida_por" name="nf_conferida_por" type="text"
+                                class="input !text-xs !py-1 bg-gray-100" readonly disabled /></div>
+                        <div><label class="block font-medium text-gray-500">Conferido em:</label><input
+                                id="edit-nf_conferida_em" name="nf_conferida_em" type="text"
+                                class="input !text-xs !py-1 bg-gray-100" readonly disabled /></div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500">Nota: Para alterar os PDFs (NF-e/CT-e), é necessário excluir e
+                    registrar a compra novamente.</p>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCompraCancel"
+                        class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
+                        Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="compradorEditModal-legacy" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Comprador</h3>
+            <form id="form-edit-comprador-legacy" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
+                        class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input name="email"
+                        type="email" class="input" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCompradorCancel-legacy"
+                        class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
+                        Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="fornecedorEditModal-legacy" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Fornecedor</h3>
+            <form id="form-edit-fornecedor-legacy" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
+                        class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">CNPJ</label><input name="cnpj" class="input"
+                        data-mask="cnpj" placeholder="00.000.000/0000-00" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditFornecedorCancel-legacy"
+                        class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
+                        Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="centroCustoEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-lg z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Centro de Custo</h3>
+            <form id="form-edit-centro-custo" class="space-y-3">
+                <input type="hidden" name="id">
+                <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
+                        class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Código</label><input name="codigo"
+                        class="input" /></div>
+                <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCentroCustoCancel"
+                        class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
+                        Alterações</button></div>
             </form>
         </div>
     </dialog>
@@ -795,14 +1442,15 @@
                                         </p>
                                     </div>
                                     <div class="flex gap-2 items-center">
-                                        <button id="btn-calendar-prev" class="btn-secondary btn-small">←</button>
-                                        <button id="btn-calendar-next" class="btn-secondary btn-small">→</button>
-                                        <select id="calendar-filter-type" class="input">
-                                            <option value="all">Tudo</option>
-                                            <option value="compra">Emiss&atilde;oo</option>
-                                            <option value="previsao">Previs&atilde;o</option>
-                                            <option value="recebimento">Recebimento</option>
-                                        </select>
+                                        <button id="btn-calendar-prev" class="btn-secondary btn-small" &larr;/button>
+                                            <button id="btn-calendar-next" class="btn-secondary btn-small"
+                                                &larr;/button>
+                                                <select id="calendar-filter-type" class="input">
+                                                    <option value="all">Tudo</option>
+                                                    <option value="compra">Emiss&atilde;oo</option>
+                                                    <option value="previsao">Previs&atilde;o</option>
+                                                    <option value="recebimento">Recebimento</option>
+                                                </select>
                                     </div>
                                 </div>
                                 <div id="dashboard-calendar" class="w-full h-80 border rounded-lg bg-white"></div>
@@ -933,8 +1581,7 @@
                                         <button id="report-filter-obra-clear" type="button"
                                             class="btn-secondary btn-small">Limpar</button>
                                     </div>
-                                    <input id="report-filter-obra-search" class="input"
-                                        placeholder="Buscar por nome, OS ou apelido...">
+                                    <input id="report-filter-obra-search" class="input" placeholder="Buscar por nome, OS ou apelido...">
                                     <select id="report-filter-obra" class="input" multiple size="8"></select>
                                 </div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por

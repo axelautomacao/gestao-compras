@@ -1,24 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // ============================================
-    // MODO DE DESENVOLVIMENTO (TEMPORÁRIO)
-    // ============================================
-    // ATENÇÃO: Para produção, comente este bloco e descomente as regras abaixo
-    // Este modo permite acesso completo para facilitar o desenvolvimento
-    
-    match /{document=**} {
-      allow read, write: if true;  // TEMPORÁRIO - APENAS PARA DESENVOLVIMENTO
-    }
-    
+
     // ============================================
     // MODO DE PRODUÇÃO
     // ============================================
-    // Descomente as regras abaixo quando o app estiver pronto para produção
-    // e comente o bloco de desenvolvimento acima
-    
-    /*
+
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null && request.auth.uid != null;
@@ -32,7 +19,7 @@ service cloud.firestore {
 
     // Helper function to check if the user has one of the required roles
     function roleIn(roles) {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
         (getUserRole() == 'administrador' || getUserRole() in roles);
     }
 
@@ -75,6 +62,12 @@ service cloud.firestore {
       allow delete: if roleIn(['diretor']);
     }
 
+    // Configurações de usuário (notificações, etc.)
+    match /settings/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if roleIn(['diretor']); // diretores podem ajudar outros usuários
+    }
+
     // Logs de auditoria
     match /logs/{id} {
       allow create: if isAuthenticated();
@@ -85,6 +78,5 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
-    */
   }
 }
