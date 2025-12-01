@@ -51,68 +51,22 @@ export const UI = {
 
     // (Item 3): Lógica do Tema
     initTheme: () => {
-        const stored = localStorage.getItem('theme') || 'system';
-        UI.applyTheme(stored);
-        UI.syncThemeControls(stored);
+        const theme = localStorage.getItem('theme') || 'system';
+        const select = $('select-theme');
+        if (select) {
+            select.value = theme;
+        }
+        UI.applyTheme(theme);
     },
 
     applyTheme: (theme) => {
-        const effectiveTheme = theme === 'system'
-            ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-            : theme;
-
-        document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
-        document.documentElement.dataset.theme = theme;
-        localStorage.setItem('theme', theme);
-        UI.syncThemeControls(theme);
-
-        // Atualiza defaults de charts/grades para acompanhar o tema
-        try {
-            const root = getComputedStyle(document.documentElement);
-            const textColor = root.getPropertyValue('--text-primary').trim() || '#111827';
-            const gridColor = root.getPropertyValue('--border-color').trim() || '#e5e7eb';
-            if (window.Chart) {
-                Chart.defaults.color = textColor;
-                Chart.defaults.borderColor = gridColor;
-                const instances = Chart.instances || {};
-                Object.values(instances).forEach((chart) => {
-                    if (!chart?.options) return;
-                    if (chart.options.scales) {
-                        Object.values(chart.options.scales).forEach((scale) => {
-                            scale.grid = { ...(scale.grid || {}), color: gridColor };
-                            scale.ticks = { ...(scale.ticks || {}), color: textColor };
-                        });
-                    }
-                    if (chart.options.plugins?.legend) {
-                        chart.options.plugins.legend.labels = {
-                            ...(chart.options.plugins.legend.labels || {}),
-                            color: textColor,
-                        };
-                    }
-                    chart.update();
-                });
-            }
-            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme, effectiveTheme } }));
-        } catch (err) {
-            console.warn('Erro ao aplicar tema:', err);
+        if (theme === 'system') {
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.classList.toggle('dark', systemPrefersDark);
+        } else {
+            document.documentElement.classList.toggle('dark', theme === 'dark');
         }
-    },
-
-    syncThemeControls: (theme) => {
-        const select = $('select-theme');
-        if (select && select.value !== theme) select.value = theme;
-        const sun = document.getElementById('theme-icon-sun');
-        const moon = document.getElementById('theme-icon-moon');
-        const isDark = (theme === 'dark') || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        sun?.classList.toggle('hidden', isDark);
-        moon?.classList.toggle('hidden', !isDark);
-    },
-
-    toggleTheme: () => {
-        const current = localStorage.getItem('theme') || 'system';
-        const order = ['system', 'light', 'dark'];
-        const next = order[(order.indexOf(current) + 1) % order.length];
-        UI.applyTheme(next);
+        localStorage.setItem('theme', theme);
     },
 
     // (Item 1 e 2): Nova Navegação

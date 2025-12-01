@@ -1,4 +1,4 @@
-﻿?<!DOCTYPE html>
+﻿﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -35,11 +35,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="./images/favicon.png">
 
-    <!-- Base -->
-    <link rel="stylesheet" href="./css/main.css">
-    <!-- Fase 1: Melhorias Visuais (deve sobrepor main) -->
+    <!-- Fase 1: Melhorias Visuais -->
     <link rel="stylesheet" href="./css/phase1-improvements.css">
     <link rel="stylesheet" href="./css/login-animation.css">
+
+    <link rel="stylesheet" href="./css/main.css">
 </head>
 
 <body class="bg-gray-100 font-poppins">
@@ -332,28 +332,43 @@
         </aside>
 
         <main id="content-area" class="flex-grow h-screen overflow-y-auto">
-                        <header
+            <header
                 class="sticky top-0 z-40 bg-[var(--bg-primary)]/95 backdrop-blur border-b border-[var(--border-color)]">
                 <div
                     class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                        <button id="btn-toggle-sidebar" class="btn-secondary btn-small !py-2 !px-3" title="Abrir/fechar menu">&#9776;</button>
-                        <div class="relative w-full">
-                            <input id="global-search" type="search" class="input pl-3 pr-10 w-full" placeholder="Buscar compras, obras ou fornecedores..." />
-                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&#8981;</span>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-toggle-sidebar" class="btn-secondary btn-small !py-2 !px-3"
+                            title="Abrir/fechar menu">
+                            ☰
+                        </button>
+                        <div class="relative w-full md:w-72">
+                            <input id="global-search" type="search" class="input pl-3 pr-10"
+                                placeholder="Buscar compras, obras ou fornecedores..." />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
                         </div>
                     </div>
-                    <div class="flex items-center gap-3 flex-shrink-0">
-                        <button id="btn-theme-toggle" class="btn-secondary btn-small !py-2 !px-3" title="Alternar Tema (Claro/Escuro)" aria-label="Alternar Tema">
-                            <span id="theme-icon-sun">&#9728;</span>
-                            <span id="theme-icon-moon" class="hidden">&#9790;</span>
+                    <div class="flex items-center gap-3 flex-wrap md:flex-nowrap">
+                        <div class="flex items-center gap-2">
+                            <label class="text-sm text-[var(--text-secondary)] whitespace-nowrap">Contexto</label>
+                            <select id="context-obra-select" class="input w-48">
+                                <option value="*">Todas as Obras</option>
+                            </select>
+                        </div>
+                        <button id="btn-theme-toggle" class="btn-secondary btn-small !py-2 !px-3"
+                            title="Alternar Tema (Claro/Escuro)" aria-label="Alternar Tema">
+                            <span id="theme-icon-sun">☀️</span>
+                            <span id="theme-icon-moon" class="hidden">🌙</span>
                         </button>
-                        <button id="btn-open-alert-center" class="btn-secondary btn-small !py-2 !px-3 relative" title="Notificações" aria-label="Notificações">
-                            &#128276;
-                            <span id="notifications-badge" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 leading-none">0</span>
+                        <button id="btn-open-alert-center" class="btn-secondary btn-small !py-2 !px-3 relative"
+                            title="Notificações" aria-label="Notificações">
+                            🔔
+                            <span id="notifications-badge"
+                                class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 leading-none">0</span>
                         </button>
                         <div class="flex items-center gap-2">
-                            <div class="h-8 w-8 rounded-full bg-[var(--axel-green)] text-white flex items-center justify-center text-sm font-semibold">AX</div>
+                            <div
+                                class="h-8 w-8 rounded-full bg-[var(--axel-green)] text-white flex items-center justify-center text-sm font-semibold">
+                                AX</div>
                             <div class="text-left leading-tight">
                                 <div class="text-sm font-semibold" id="user-name-top">Usuário</div>
                                 <div class="text-xs text-[var(--text-secondary)]" id="user-role-top">--</div>
@@ -790,8 +805,8 @@
                                         </p>
                                     </div>
                                     <div class="flex gap-2 items-center">
-                                        <button id="btn-calendar-prev" class="btn-secondary btn-small">`n                            ?`n                        </button>
-                                        <button id="btn-calendar-next" class="btn-secondary btn-small">`n                            ?`n                        </button>
+                                        <button id="btn-calendar-prev" class="btn-secondary btn-small">←</button>
+                                        <button id="btn-calendar-next" class="btn-secondary btn-small">→</button>
                                         <select id="calendar-filter-type" class="input">
                                             <option value="all">Tudo</option>
                                             <option value="compra">Emiss&atilde;oo</option>
@@ -1230,7 +1245,7 @@
 
                 <section id="page-cadastro-obras" class="page space-y-6">
                     <div id="cadastros-voltar-btn-wrapper" class="hidden">
-                        <button type="button" data-action="go-back" class="btn-secondary btn-small">?
+                        <button type="button" data-action="go-back" class="btn-secondary btn-small">←
                             Voltar</button>
                     </div>
 
@@ -1333,7 +1348,7 @@
                                         Hospedagens</label>
                                     <input name="qtd_hospedagens" type="number" class="input" />
                                 </div>
-                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
                                     <input id="obra-filha-toggle" type="checkbox" name="is_obra_filha" class="h-4 w-4">
                                     <label for="obra-filha-toggle" class="text-sm text-gray-700">Obra Filha?</label>
                                 </div>
@@ -1571,7 +1586,7 @@
         <div class="flex justify-between items-center p-4 border-b">
             <h3 class="text-lg font-bold">Editar Obra</h3>
             <button onclick="document.getElementById('obraEditModal').close()"
-                class="text-gray-500 hover:text-gray-700">`n                            ?`n                        </button>
+                class="text-gray-500 hover:text-gray-700">✕</button>
         </div>
         <div class="p-6 overflow-y-auto max-h-[80vh]">
             <form id="form-edit-obra" class="space-y-4">
@@ -1651,7 +1666,7 @@
                         <label class="block text-sm font-medium text-gray-700">Qtde Hospedagens</label>
                         <input name="qtd_hospedagens" type="number" class="input mt-1 w-full">
                     </div>
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
                         <input type="checkbox" name="is_obra_filha" id="edit-obra-filha" class="h-4 w-4">
                         <label for="edit-obra-filha" class="text-sm text-gray-700">Obra Filha?</label>
                     </div>
@@ -1719,15 +1734,3 @@
 </body>
 
 </html>
-
-
-
-
-
-
-
-
-
-
-
-

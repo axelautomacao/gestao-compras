@@ -59,35 +59,11 @@
     /* Aplica tema aos cards, modais, inputs, etc. */
     .card {
         background-color: var(--bg-primary);
-        color: var(--text-primary);
         border-color: var(--border-color);
         border-width: 1px;
         border-radius: 0.5rem;
         padding: 1.5rem;
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    }
-
-    :root.dark .card {
-        background-color: var(--bg-secondary);
-        color: var(--text-primary);
-    }
-
-    /* Normaliza cards com classes Tailwind de fundo/borda */
-    .card[class*="bg-"] {
-        background-color: var(--bg-primary) !important;
-        color: var(--text-primary) !important;
-        border-color: var(--border-color) !important;
-    }
-
-    :root.dark .card[class*="bg-"] {
-        background-color: var(--bg-secondary) !important;
-        color: var(--text-primary) !important;
-        border-color: var(--border-color) !important;
-    }
-
-    .card.border,
-    .card[class*="border-"] {
-        border-color: var(--border-color) !important;
     }
 
     dialog {
@@ -449,45 +425,4 @@
 
     .vis-timeline {
         width: 100%;
-    }
-
-    /* Ajustes de contraste para tema escuro em utilitários Tailwind usados no HTML */
-    :root.dark .text-gray-500,
-    :root.dark .text-gray-600 {
-        color: var(--text-secondary) !important;
-    }
-
-    :root.dark .text-gray-700,
-    :root.dark .text-gray-800,
-    :root.dark .text-gray-900 {
-        color: var(--text-primary) !important;
-    }
-
-    :root.dark .bg-gray-50,
-    :root.dark .bg-gray-100,
-    :root.dark .bg-emerald-50,
-    :root.dark .bg-indigo-50,
-    :root.dark .bg-amber-50,
-    :root.dark .bg-rose-50 {
-        background-color: var(--bg-secondary) !important;
-    }
-
-    :root.dark .border-gray-200,
-    :root.dark .border-gray-300 {
-        border-color: var(--border-color) !important;
-    }
-
-    /* Sidebar: compatibilidade para body.sidebar-collapsed */
-    body.sidebar-collapsed #sidebar {
-        width: 4.5rem;
-    }
-
-    body.sidebar-collapsed #sidebar .nav-link span,
-    body.sidebar-collapsed #sidebar .logo-text {
-        display: none;
-    }
-
-    body.sidebar-collapsed #sidebar .nav-link {
-        justify-content: center;
-        padding-inline: 0.75rem;
     }

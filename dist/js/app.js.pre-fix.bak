@@ -272,10 +272,6 @@ const App = {
         try {
             const themeSelect = $('select-theme');
             themeSelect?.addEventListener('change', (e) => UI.applyTheme(e.target.value));
-            $('btn-theme-toggle')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                UI.toggleTheme();
-            });
         } catch (err) {
             console.warn("Erro ao ligar o listener do tema:", err);
         }
@@ -285,19 +281,14 @@ const App = {
             contextSelect?.addEventListener('change', (e) => UI.applyContextSelection(e.target.value));
             $('btn-toggle-sidebar')?.addEventListener('click', () => {
                 const sidebar = $('sidebar');
-                if (!sidebar) return;
-                const isMobile = window.matchMedia('(max-width: 768px)').matches;
-                if (isMobile) {
+                if (sidebar) {
                     sidebar.classList.toggle('-translate-x-full');
-                    return;
+                    sidebar.classList.toggle('collapsed');
+                    localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed') ? '1' : '0');
                 }
-                const collapsed = document.body.classList.toggle('sidebar-collapsed');
-                sidebar.classList.toggle('collapsed', collapsed);
-                localStorage.setItem('sidebar-collapsed', collapsed ? '1' : '0');
             });
             const sidebarEl = $('sidebar');
             if (sidebarEl && localStorage.getItem('sidebar-collapsed') === '1') {
-                document.body.classList.add('sidebar-collapsed');
                 sidebarEl.classList.add('collapsed');
             }
             $('view-table-toggle')?.addEventListener('click', () => {
