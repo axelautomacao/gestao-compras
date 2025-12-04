@@ -1,11 +1,11 @@
-/* ========================================
+﻿/* ========================================
    FASE 1: MELHORIAS VISUAIS - "QUICK WINS"
-   App Gestão de Compras Axel
+   App GestÃ£o de Compras Axel
    ======================================== */
 
-/* ===== 1.1 & 1.2: VARIÁVEIS CSS ATUALIZADAS ===== */
+/* ===== 1.1 & 1.2: VARIÃVEIS CSS ATUALIZADAS ===== */
 :root {
-    /* Cores Primárias Expandidas */
+    /* Cores PrimÃ¡rias Expandidas */
     --axel-green: #2E9A45;
     --axel-green-hover: #257a38;
     --axel-green-light: #D1FAE5;
@@ -47,7 +47,7 @@
     /* Slate-200 */
     --border-light: #F1F5F9;
 
-    /* Sombra padrão para uso nas cartas */
+    /* Sombra padrÃ£o para uso nas cartas */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.12);
@@ -66,8 +66,51 @@
     box-shadow: var(--shadow-md) !important;
     /* Efeito hover sutil */
     transform: translateY(-1px);
-    /* Leve elevação */
+    /* Leve elevaÃ§Ã£o */
 }
+
+/* KPI Cards com borda semántica (compatível com dark mode) */
+.kpi-card {
+    background: var(--bg-primary);
+    border-radius: 0.9rem;
+    border: 1px solid var(--border-color);
+    border-left-width: 6px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    gap: 0.35rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.kpi-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+:root.dark .kpi-card {
+    background: #111827;
+    border-color: #1f2937;
+}
+
+.kpi-card .kpi-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.kpi-card .kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+:root.dark .kpi-card .kpi-value {
+    color: #e2e8f0;
+}
+
+.border-l-emerald { border-left-color: #10b981 !important; }
+.border-l-blue { border-left-color: #3b82f6 !important; }
+.border-l-amber { border-left-color: #f59e0b !important; }
+.border-l-red { border-left-color: #ef4444 !important; }
 
 /* ===== 1.2: BADGES DE STATUS COM FUNDOS SUAVES ===== */
 .badge-status {
@@ -88,7 +131,7 @@
     /* Verde escuro */
 }
 
-/* Status: Em Cotação - Azul */
+/* Status: Em CotaÃ§Ã£o - Azul */
 .badge-cotacao {
     background-color: var(--axel-blue-light);
     color: #1E40AF;
@@ -154,51 +197,52 @@ table tbody td {
     color: var(--text-primary);
 }
 
-/* Alinhar Números à Direita */
+/* Alinhar NÃºmeros Ã  Direita */
 table tbody td.text-right,
 table tbody td[class*="valor"],
 table tbody td[class*="preco"],
 table tbody td[class*="total"] {
     text-align: right;
     font-variant-numeric: tabular-nums;
-    /* Números alinhados */
+    /* NÃºmeros alinhados */
 }
 
 /* ===== 1.4: FEEDBACK DE AÇÃO - TOASTS MELHORADOS ===== */
 .notification {
-    border-radius: 0.75rem !important;
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(420px, calc(100% - 1.5rem));
+    border-radius: 0.9rem !important;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--text-primary);
     box-shadow: var(--shadow-lg) !important;
-    backdrop-filter: blur(8px);
-    animation: slideInRight 0.3s ease-out;
+    backdrop-filter: blur(12px);
+    padding: 0.9rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 9999;
+    animation: slideDownFade 0.25s ease-out;
 }
 
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+:root.dark .notification {
+    background: rgba(17, 24, 39, 0.92);
+    border-color: #334155;
+    color: #e2e8f0;
 }
 
-.notification.notif-success {
-    background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+@keyframes slideDownFade {
+    from { transform: translate(-50%, -10px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
 }
 
-.notification.notif-error {
-    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
-}
-
-.notification.notif-info {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-}
-
-.notification.notif-warning {
-    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
-}
+.notification.notif-success { border-left: 4px solid #10B981; }
+.notification.notif-error { border-left: 4px solid #EF4444; }
+.notification.notif-info { border-left: 4px solid #3B82F6; }
+.notification.notif-warning { border-left: 4px solid #F59E0B; }
 
 /* ===== 1.4: MODAIS MAIS MODERNOS ===== */
 dialog {
@@ -206,15 +250,63 @@ dialog {
     border-radius: 1rem !important;
     box-shadow: var(--shadow-xl) !important;
     padding: 0 !important;
-    max-width: 90vw;
+    max-width: 960px;
+    width: min(960px, 96vw);
+    max-height: 90vh;
+    overflow: hidden;
+    background: var(--bg-modal);
 }
 
 dialog::backdrop {
     background-color: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
 }
 
-/* ===== 1.1: ESPAÇAMENTO MELHORADO ===== */
+dialog .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-modal);
+    border-bottom: 1px solid var(--border-color);
+}
+
+dialog .modal-body {
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    max-height: calc(90vh - 180px);
+    background: var(--bg-modal);
+}
+
+dialog .modal-footer {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,1) 80%);
+    border-top: 1px solid var(--border-color);
+}
+
+:root.dark dialog .modal-header,
+:root.dark dialog .modal-body {
+    background: #111827;
+    color: #e2e8f0;
+    border-color: #334155;
+}
+
+:root.dark dialog .modal-footer {
+    background: linear-gradient(180deg, rgba(17,24,39,0.95) 0%, rgba(17,24,39,1) 80%);
+    border-color: #334155;
+}
+
+/* ===== 1.1: ESPAÃ‡AMENTO MELHORADO ===== */
 .space-y-4>*+* {
     margin-top: 1rem !important;
 }
@@ -231,7 +323,7 @@ dialog::backdrop {
     gap: 1.5rem !important;
 }
 
-/* ===== 1.2: BOTÕES REFINADOS ===== */
+/* ===== 1.2: BOTÃ•ES REFINADOS ===== */
 .btn {
     border-radius: 0.5rem !important;
     font-weight: 600 !important;
@@ -394,6 +486,16 @@ body.sidebar-collapsed #sidebar .logo-area {
     justify-content: center;
 }
 
+/* Evita compressÃ£o do logo no colapso */
+#sidebar .logo-area img {
+    max-height: 40px;
+    width: auto;
+}
+
+body.sidebar-collapsed #sidebar .logo-area img {
+    max-height: 32px;
+}
+
 /* Navigation Links */
 .nav-link {
     display: flex;
@@ -504,3 +606,6 @@ body.sidebar-collapsed #sidebar .user-profile {
     overflow-y: auto;
     transition: margin-left 0.3s ease;
 }
+
+
+

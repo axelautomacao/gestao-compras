@@ -1,4 +1,4 @@
-// js/app.js
+﻿// js/app.js
 import { state } from './state.js';
 import { Auth } from './auth.js';
 import { Data } from './data.js';
@@ -8,6 +8,8 @@ import { AuthMiddleware } from './auth-middleware.js';
 import { UIReports } from './ui-reports.js';
 import { UIForms } from './ui-forms.js';
 
+console.info('[App] script carregado');
+
 // --- Mapeamento de DOM ---
 const $ = (id) => document.getElementById(id);
 
@@ -15,6 +17,7 @@ const $ = (id) => document.getElementById(id);
 const App = {
     // init agora é assíncrono
     init: async () => {
+        console.info('[App] init iniciado');
         const timeoutMs = 7000;
         let timedOut = false;
         let initCompleted = false;
@@ -22,6 +25,7 @@ const App = {
         const finishInit = (userProfile) => {
             if (initCompleted) return;
             initCompleted = true;
+            console.info('[App] init finalizado', { userProfile });
 
             if (userProfile) {
                 App.initializeApp_PostLogin(userProfile);
@@ -34,6 +38,17 @@ const App = {
                 UI.showLoginModal('login');
             }
         };
+
+        setTimeout(() => {
+            if (!initCompleted) {
+                console.warn('[App] init demorando; exibindo login como fallback');
+                const loader = $('loader');
+                if (loader) loader.classList.add('hidden');
+                App.cleanupOnSignOut();
+                UI.updateUIForRole();
+                UI.showLoginModal('login');
+            }
+        }, 8000);
 
         const timeoutId = setTimeout(() => {
             timedOut = true;
@@ -59,6 +74,7 @@ const App = {
                 clearTimeout(timeoutId);
                 finishInit(currentProfile);
             });
+            console.info('[App] Auth.init resolvido', { userProfile });
 
             if (!timedOut) {
                 clearTimeout(timeoutId);
@@ -893,3 +909,4 @@ const App = {
 
 // --- INICIALIZAÇÃO ---
 App.init();
+

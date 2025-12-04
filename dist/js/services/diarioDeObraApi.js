@@ -3,7 +3,15 @@
  */
 
 // A configuração agora é lida do objeto global definido em env.js
-const getToken = () => (globalThis.__RDO_API_CONFIG || globalThis.window?.__RDO_API_CONFIG || {}).TOKEN;
+const getToken = () => {
+  const cfgToken = (globalThis.__RDO_API_CONFIG || globalThis.window?.__RDO_API_CONFIG || {}).TOKEN;
+  if (cfgToken) return cfgToken;
+  try {
+    const local = localStorage.getItem('axel_rdo_token');
+    if (local) return local;
+  } catch { }
+  return globalThis.__RDO_API_TOKEN || '';
+};
 const BASE_URL = 'https://apiexterna.diariodeobra.app/v1'; // Hardcoded como não está no env.js
 const HORAS_PADRAO_DIA = 9;
 

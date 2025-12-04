@@ -5,6 +5,7 @@ import { NotificationManager } from './notification-manager.js';
 import { UIDashboard } from './ui-dashboard.js';
 import { UIForms } from './ui-forms.js';
 import { UIReports } from './ui-reports.js';
+import { Icons } from './icons.js';
 
 // --- Mapeamento de DOM ---
 const $ = (id) => document.getElementById(id);
@@ -24,7 +25,7 @@ const compradorEditModal = $('compradorEditModal');
 const fornecedorEditModal = $('fornecedorEditModal');
 const centroCustoEditModal = $('centroCustoEditModal');
 const contextSelect = $('context-obra-select');
-const VIEW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>`;
+const VIEW_ICON = Icons.eye;
 
 // --- Objeto UI ---
 export const UI = {
@@ -54,6 +55,41 @@ export const UI = {
         const stored = localStorage.getItem('theme') || 'system';
         UI.applyTheme(stored);
         UI.syncThemeControls(stored);
+
+        // Sidebar backdrop (mobile)
+        let sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebarBackdrop) {
+            sidebarBackdrop = document.createElement('div');
+            sidebarBackdrop.id = 'sidebar-backdrop';
+            document.body.appendChild(sidebarBackdrop);
+        }
+
+        const sidebar = $('sidebar');
+        const toggleBtn = $('btn-toggle-sidebar');
+
+        const closeSidebarMobile = () => {
+            sidebar?.classList.remove('open');
+            sidebarBackdrop.classList.remove('visible');
+        };
+
+        if (!sidebarBackdrop.dataset.bound) {
+            sidebarBackdrop.dataset.bound = '1';
+            sidebarBackdrop.addEventListener('click', closeSidebarMobile);
+        }
+
+        if (toggleBtn && !toggleBtn.dataset.sidebarBound) {
+            toggleBtn.dataset.sidebarBound = '1';
+            toggleBtn.addEventListener('click', () => {
+                const isMobile = window.matchMedia('(max-width: 768px)').matches;
+                if (isMobile) {
+                    sidebar?.classList.toggle('open');
+                    const isOpen = sidebar?.classList.contains('open');
+                    sidebarBackdrop.classList.toggle('visible', !!isOpen);
+                } else {
+                    sidebarBackdrop.classList.remove('visible');
+                }
+            });
+        }
     },
 
     applyTheme: (theme) => {
@@ -116,7 +152,7 @@ export const UI = {
     },
 
     // (Item 1 e 2): Nova Navegação
-    renderNav: () => {
+        renderNav: () => {
         const role = state.currentUser?.role || 'obra';
 
         // Apenas as roles efetivamente permitidas (admin herda tudo)
@@ -124,23 +160,28 @@ export const UI = {
             ? ['administrador', 'diretor', 'financeiro', 'comprador', 'obra']
             : [role];
 
-        const allNavButtons = [
-            { id: 'dashboard-geral', label: 'Dashboard Geral', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h12A2.25 2.25 0 0020.25 14.25V3M3.75 3l-1.5 1.5M3.75 3h16.5M12 3c0 1.657-1.343 3-3 3S6 4.657 6 3m6 0c0 1.657 1.343 3 3 3s3-1.343 3-3m-3.75 6.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" /></svg>`, roles: ['diretor', 'financeiro'] },
-            { id: 'dashboard', label: 'Dashboard p/ Obra', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>`, roles: ['diretor', 'comprador', 'obra', 'financeiro'] },
-            { id: 'registro', label: 'Registrar Compra', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.042 21.672L13.684 16.6m0 0l-2.5 2.5m2.5-2.5l-2.828-2.828M10.5 21.672L9.142 16.6m0 0l2.5 2.5m-2.5-2.5l2.828-2.828m0 0l-2.828 2.828m0 0L6.32 19.34m0 0l.928.928M3.75 21V9.75A2.25 2.25 0 016 7.5h12A2.25 2.25 0 0120.25 9.75V21M3.75 21H6m14.25 0H18m0 0l-2.25-2.25M3.75 21l-2.25-2.25M12 11.25V15" /></svg>`, roles: ['diretor', 'comprador'] },
-            { id: 'relatorio-compras', label: 'Compras', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>`, roles: ['diretor', 'comprador', 'financeiro'] },
-            { id: 'relatorios-fornecedor', label: 'Rel. Fornecedor', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m-4.682 2.72a.75.75 0 01-.727 0l-4.682-2.72a3 3 0 01-4.682 2.72 9.094 9.094 0 013.741.479m4.682-2.72a9.094 9.094 0 013.741-.479m0 0a48.102 48.102 0 00-3.741-.479m-4.682 2.72c.52.304 1.076.552 1.67.727m-1.67-.727a48.105 48.105 0 01-3.741.479m0 0c-.596.343-1.22.61-1.871.791m0 0a9.094 9.094 0 01-3.741-.479m0 0c.596.343 1.22.61 1.871.791M12 12.75a3 3 0 100-6 3 3 0 000 6z" /></svg>`, roles: ['diretor', 'comprador', 'financeiro'] },
+        const icon = (path) => `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor" class="w-5 h-5">${path}</svg>`;
 
-            // (Item 1): Links de Cadastros Separados
-            { id: 'separator', type: 'separator', roles: ['diretor'] }, // Separador visual
-            { id: 'cadastro-obras', label: 'Cadastrar Obras', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-1.5l-2.625 2.625a.375.375 0 01-.53 0l-2.625-2.625m0-7.5l2.625 2.625a.375.375 0 010 .53l-2.625 2.625m7.5-3l2.625 2.625a.375.375 0 010 .53l-2.625 2.625M15 12l-2.625 2.625a.375.375 0 01-.53 0L9.25 12M4.5 8.25l2.625 2.625a.375.375 0 010 .53L4.5 14.25" /></svg>`, roles: ['diretor', 'comprador', 'obra'] },
-            { id: 'cadastro-compradores', label: 'Cad. Compradores', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>`, roles: ['diretor'] },
-            { id: 'cadastro-fornecedores', label: 'Cad. Fornecedores', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-6 0V6a1.5 1.5 0 013 0v12.75m3-12.75V6a1.5 1.5 0 013 0v12.75m-3-12.75h.008v.008H12v-.008z" /></svg>`, roles: ['diretor'] },
-            { id: 'cadastro-centros-custo', label: 'Cad. Centros Custo', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.75A.75.75 0 013 4.5h.75m0 0h.75A.75.75 0 014.5 6v.75m0 0v.75A.75.75 0 013.75 8.25h-.75m0 0H3A.75.75 0 012.25 7.5v-.75M6 15V7.5a2.25 2.25 0 012.25-2.25h3.75a2.25 2.25 0 012.25 2.25V15m-6 0h6m-6 0v6A2.25 2.25 0 008.25 22.5h7.5A2.25 2.25 0 0018 21V15m-6 0h6" /></svg>`, roles: ['diretor'] },
+        const allNavButtons = [
+            { id: 'dashboard-geral', label: 'Dashboard Geral', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z" />`), roles: ['diretor', 'financeiro'] },
+            { id: 'dashboard', label: 'Dashboard p/ Obra', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 21V9.75A1.75 1.75 0 016.25 8h11.5A1.75 1.75 0 0119.5 9.75V21m-12-7.5h9m-9-3h9m-9 6h9m-6-9V5.25A1.75 1.75 0 0112.75 3.5h0A1.75 1.75 0 0114.5 5.25V6" />`), roles: ['diretor', 'comprador', 'obra', 'financeiro'] },
+            { id: 'registro', label: 'Registrar Compra', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 4.5h10.5A1.75 1.75 0 0119 6.25v11.5A1.75 1.75 0 0117.25 19H6.75A1.75 1.75 0 015 17.75V6.25A1.75 1.75 0 016.75 4.5zm5.25 3v6m-3-3h6" />`), roles: ['diretor', 'comprador'] },
+            { id: 'relatorio-compras', label: 'Compras', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M5 7.75h14M5 12h14M5 16.25h9M6.5 4.5h11A1.5 1.5 0 0119 6v12a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 015 18V6A1.5 1.5 0 016.5 4.5z" />`), roles: ['diretor', 'comprador', 'financeiro'] },
+            { id: 'relatorios-fornecedor', label: 'Rel. Fornecedor', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 17.25h16.5M4.5 17.25l1-4h13l1 4M9 17.25V9.75a3 3 0 016 0v7.5m-4.5-7.5h3m-7.5-5.5h9l1.5 3h-12z" />`), roles: ['diretor', 'comprador', 'financeiro'] },
+
+            { id: 'separator', type: 'separator', roles: ['diretor'] },
+            { id: 'cadastro-obras', label: 'Cadastrar Obras', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5h15m-13.5 0V9.75a1.5 1.5 0 011.5-1.5h9a1.5 1.5 0 011.5 1.5V19.5m-10.5-6h6m-3-3v6m-5.25-9h12.5l-6.25-4.5z" />`), roles: ['diretor', 'comprador', 'obra'] },
+            { id: 'cadastro-compradores', label: 'Cad. Compradores', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M8.5 7.5a3.5 3.5 0 117 0 3.5 3.5 0 01-7 0zm-3 10.25a5.75 5.75 0 0111.5 0V19h-11.5v-1.25zm12.75 1.25v-1.5c0-.79-.64-1.44-1.43-1.5" />`), roles: ['diretor'] },
+            { id: 'cadastro-fornecedores', label: 'Cad. Fornecedores', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M5.25 6.75h13.5m-12 0V5.25A1.5 1.5 0 018.25 3.75h7.5a1.5 1.5 0 011.5 1.5v1.5m-12 0V18a1.5 1.5 0 001.5 1.5h7.5A1.5 1.5 0 0019.5 18V6.75m-12 8.5h4.5m-4.5-3h6" />`), roles: ['diretor'] },
+            { id: 'cadastro-centros-custo', label: 'Cad. Centros Custo', icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M7 10.5a5 5 0 1110 0 5 5 0 01-10 0zm5-3.25v6.5m-3.25-3.25h6.5M4 19.25h16" />`), roles: ['diretor'] },
         ];
 
-        // Botão de Configurações (Item 2)
-        const settingsButton = { id: 'configuracoes', label: 'Configurações', icon: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-1.003 1.11-1.226l.28-.1c.792-.286 1.663.111 1.95.898l.04.1c.09.542.56 1.003 1.11 1.226l.28.1c.792.286 1.663-.111 1.95-.898l.04-.1c.287-.787 1.158-1.184 1.95-.898l.28.1c.548.223 1.02.684 1.11 1.226l.04.242c.287.787-.111 1.663-.898 1.95l-.1.04c-.548.223-1.02.684-1.11 1.226l-.04.242c-.287.787.111 1.663.898 1.95l.1.04c.787.287 1.184 1.158.898 1.95l-.1.28c-.223.548-.684 1.02-1.226 1.11l-.242.04c-.787.287-1.663-.111-1.95-.898l-.04-.1c-.223-.548-.684-1.02-1.226-1.11l-.242-.04c-.787-.287-1.663.111-1.95-.898l-.04.1c-.287.787-1.158 1.184-1.95-.898l-.28-.1c-.548-.223-1.02-.684-1.11-1.226l-.04-.242c-.287-.787.111-1.663.898 1.95l.1-.04c.548-.223 1.02.684 1.11-1.226l.04-.242c.287-.787-.111-1.663-.898-1.95l-.1-.04c-.787-.287-1.184-1.158-.898-1.95l.1-.28c.223-.548.684-1.02-1.226-1.11l.242-.04c.787-.287 1.663.111 1.95.898l.04.1c.223.548.684 1.02 1.226 1.11l.242.04c.787.287 1.663.111 1.95-.898l.04-.1c.287-.787 1.158-1.184 1.95-.898l.28.1c.548-.223 1.02.684 1.11 1.226l.04.242zM12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>`, roles: ['diretor', 'comprador', 'obra', 'financeiro'] };
+        const settingsButton = {
+            id: 'configuracoes',
+            label: 'Configurações',
+            icon: icon(`<path stroke-linecap="round" stroke-linejoin="round" d="M10.5 4.5h3m-5.25 3.75h7.5m-7.5 7.5h7.5M6 9.75h-.75A1.75 1.75 0 013.5 8V6.5A1.75 1.75 0 015.25 4.75H6m12 5h.75A1.75 1.75 0 0020.5 8V6.5A1.75 1.75 0 0018.75 4.75H18m-12 9h-.75A1.75 1.75 0 003.5 16v1.5A1.75 1.75 0 005.25 19.25H6m12-5h.75A1.75 1.75 0 0020.5 16v1.5a1.75 1.75 0 01-1.75 1.75H18" />`),
+            roles: ['diretor', 'comprador', 'obra', 'financeiro']
+        };
 
         // Filtra os botões principais
         const navButtons = allNavButtons.filter(btn => {
@@ -157,11 +198,9 @@ export const UI = {
             const classes = isActive ? 'nav-link active' : 'nav-link inactive';
             return `<button data-page="${btn.id}" class="${classes}">${btn.icon}<span>${btn.label}</span></button>`;
         }).join('')
-            + '<div class="flex-grow"></div>' // Espaçador
+            + '<div class="flex-grow"></div>'
             + `<button data-page="${settingsButton.id}" class="${state.currentPage === settingsButton.id ? 'nav-link active' : 'nav-link inactive'}">${settingsButton.icon}<span>${settingsButton.label}</span></button>`;
-    },
-
-    // (Item 1 e 2): Lida com as novas páginas
+    },// (Item 1 e 2): Lida com as novas páginas
     showPage: (pageId) => {
         const targetPage = document.getElementById(`page-${pageId}`);
         const safePageId = targetPage ? pageId : 'dashboard-geral';
@@ -809,3 +848,5 @@ export const UI = {
         });
     });
 })();
+
+

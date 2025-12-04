@@ -1,4 +1,4 @@
-﻿?<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 
 <head>
@@ -32,7 +32,7 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" href="./images/favicon.png">
 
     <!-- Base -->
@@ -266,6 +266,7 @@
             <h3 class="text-xl font-medium mb-4">Editar Compra</h3>
             <div id="edit-orcamento-resumo" class="orcamento-resumo-grid mb-4 hidden"></div>
             <form id="form-edit-compra" class="space-y-4">
+                <div id="edit-compra-error" class="hidden p-3 rounded-md bg-red-50 text-red-700 text-sm"></div>
                 <input type="hidden" name="id">
                 <input type="hidden" name="retirada_estoque" id="edit-retirada-estoque">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -302,13 +303,9 @@
                     <input name="apelido_compra" class="input mt-1 w-full" placeholder="Ex.: Compra Painel Lote 1" />
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
-                            class="input" required /></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Código</label><input name="codigo"
-                            class="input" /></div>
-                    <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCentroCustoCancel"
-                            class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
-                            Alterações</button></div>
+                <input type="hidden" name="nome" />
+                <input type="hidden" name="codigo" />
+                <div class="flex justify-end gap-3 pt-2"><button type="button" id="btnEditCompraCancel" class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar Alterações</button></div>
             </form>
         </div>
     </dialog>
@@ -882,63 +879,82 @@
                             Para filtros avançados com seleção múltipla, veja seção abaixo.
                         -->
                         <div class="space-y-4 mb-4 p-4 border rounded-lg bg-gray-50">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
-                                    <div class="input-group mt-1">
-                                        <select id="report-filter-fornecedor-top" name="fornecedorId"></select>
+                            <div class="space-y-4">
+                                <div class="p-4 border rounded-lg bg-gray-50 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-semibold text-gray-700">Filtros principais</h4>
+                                        <small class="text-xs text-gray-500">Use estes campos para localizar rapidamente.</small>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Obra / O.S.</label>
+                                            <div class="input-group mt-1">
+                                                <select id="report-filter-obra" name="obraId"></select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                                            <div class="input-group mt-1">
+                                                <select id="report-filter-fornecedor-top" name="fornecedorId"></select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                                            <div class="input-group mt-1">
+                                                <select id="report-filter-comprador-top" name="compradorId" required></select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Número NF-e *</label>
+                                            <input id="report-filter-numero" name="numero_nf" class="input mt-1" required
+                                                pattern="[0-9]*" title="Apenas numeros sao permitidos." />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                                            <div class="input-group mt-1">
+                                                <select id="report-filter-centrocusto-top" name="centroCustoId" required></select>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Comprador *</label>
-                                    <div class="input-group mt-1">
-                                        <select id="report-filter-comprador-top" name="compradorId" required></select>
+
+                                <div class="p-4 border rounded-lg bg-gray-50 space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-semibold text-gray-700">Refinar busca</h4>
+                                        <small class="text-xs text-gray-500">Datas e descrição para resultados mais precisos.</small>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Descrição da Compra</label>
+                                        <textarea id="report-filter-descricao" name="descricao_compra" rows="2"
+                                            class="input mt-1 w-full"
+                                            placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Data Emissão</label>
+                                            <input id="report-filter-date-start" class="input" type="date" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Fornecedor</label>
+                                            <select id="report-filter-fornecedor" class="input" multiple size="4"></select>
+                                            <p class="text-xs text-gray-500 mt-1">Segure CTRL ou CMD para múltiplos.</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Comprador</label>
+                                            <select id="report-filter-comprador" class="input" multiple size="4"></select>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end items-center">
+                                        <button id="btn-report-buscar" type="button" class="btn px-6 py-2">Buscar Compras</button>
                                     </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Numero NF-e *</label>
-                                    <input id="report-filter-numero" name="numero_nf" class="input mt-1" required
-                                        pattern="[0-9]*" title="Apenas numeros sao permitidos." />
-                                </div>
-                            </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
-                                <div class="input-group mt-1">
-                                    <select id="report-filter-centrocusto-top" name="centroCustoId" required></select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Descricao da Compra</label>
-                                <textarea id="report-filter-descricao" name="descricao_compra" rows="2"
-                                    class="input mt-1 w-full"
-                                    placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Data Emissão
-                                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por
-                                                Fornecedor</label><select id="report-filter-fornecedor" class="input"
-                                                multiple size="4"></select></div>
-                                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por
-                                                Comprador</label><select id="report-filter-comprador" class="input"
-                                                multiple size="4"></select></div>
-                                </div>
-                                <p class="text-xs text-gray-500">Dica: Segure CTRL (ou CMD) para selecionar múltiplos
-                                    itens
-                                    nas listas.</p>
-                                <div class="flex justify-end items-center">
-                                    <button id="btn-report-buscar" type="button" class="btn px-6 py-2">Buscar
-                                        Compras</button>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-between items-center mb-4">
-                                <p class="text-sm text-gray-500">Escolha como quer visualizar os resultados:</p>
-                                <div class="flex gap-2">
-                                    <button id="view-table-toggle" class="btn btn-small">Tabela</button>
-                                    <button id="view-kanban-toggle" class="btn-secondary btn-small">Quadro
-                                        (Kanban)</button>
+                                <div class="flex justify-between items-center mb-2">
+                                    <p class="text-sm text-gray-500">Escolha como visualizar os resultados:</p>
+                                    <div class="flex gap-2">
+                                        <button id="view-table-toggle" class="btn btn-small">Tabela</button>
+                                        <button id="view-kanban-toggle" class="btn-secondary btn-small">Quadro (Kanban)</button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -999,13 +1015,10 @@
                                                 data-sort="emissao">Data Emissão</th>
                                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
                                                 data-sort="comprador">Comprador</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
-                                                data-sort="valor">Valor</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                PDFs
-                                            </th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                                                Ações</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                        data-sort="valor">Valor</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                        Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody id="report-table-body" class="divide-y divide-gray-200"></tbody>
@@ -1719,6 +1732,8 @@
 </body>
 
 </html>
+
+
 
 
 

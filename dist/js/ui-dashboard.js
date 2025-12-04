@@ -5,9 +5,9 @@ import { state } from './state.js';
 import { Utils } from './utils.js';
 import { Data } from './data.js';
 import { NotificationManager } from './notification-manager.js';
+import { Icons } from './icons.js';
 
 const $ = (id) => document.getElementById(id);
-const VIEW_ICON = `<svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12s-3.75 6.75-9.75 6.75S2.25 12 2.25 12z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 100-7.5 3.75 3.75 0 000 7.5z" /></svg>`;
 
 let barChart, pieChart, donutChart, rdoHoursChart, sCurveChart, hoursCompareChart, hoursDailyChart, hoursCurveChart;
 let barChartGeral, pieChartGeral, lineChartGeral, curveChartGeral;
@@ -35,6 +35,27 @@ const hidePlaceholder = (canvasEl) => {
     const placeholder = container?.querySelector('.chart-placeholder');
     if (placeholder) placeholder.remove();
     canvasEl.style.display = 'block';
+};
+
+const showChartLoading = (containerId) => {
+    const el = $(containerId);
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    let placeholder = container.querySelector('.chart-placeholder');
+    if (!placeholder) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'chart-placeholder flex flex-col items-center justify-center gap-2 text-center text-sm text-gray-500 py-6';
+        container.appendChild(placeholder);
+    }
+    placeholder.innerHTML = '<div class="w-8 h-8 border-2 border-dashed border-gray-300 rounded-full animate-spin"></div><div>Carregando dados...</div>';
+    el.style.display = 'none';
+};
+
+const showChartEmpty = (containerId) => {
+    const el = $(containerId);
+    if (!el) return;
+    showPlaceholder(el, 'Sem dados disponíveis.');
 };
 
 const loadNotificationPrefsSafe = () => {
@@ -87,18 +108,21 @@ const safeText = (id, text) => {
     if (el) el.textContent = text;
 };
 const setKpi = (id, text) => safeText(id, text);
+const resetRdoKpis = () => {
+    [
+        'kpi-horas-previstas', 'kpi-horas-executadas', 'kpi-horas-saldo', 'kpi-custo-mao',
+        'kpi-horas-extras-total', 'kpi-horas-extras-percent', 'kpi-horas-orcadas', 'kpi-horas-gastas',
+        'kpi-horas-diff', 'kpi-horas-percent', 'kpi-combined-total', 'kpi-combined-gasto',
+        'kpi-combined-diff', 'kpi-combined-percent'
+    ].forEach(id => setKpi(id, '-'));
+};
 
 const parseDateRdo = (raw) => {
     if (!raw) return null;
-    if (typeof raw === 'string' && raw.includes('/')) {
-        const [d, m, y] = raw.split('/').map(Number);
-        if (d && m && y) {
-            const date = new Date(Date.UTC(y, m - 1, d));
-            return isNaN(date) ? null : date;
-        }
-    }
     const d = new Date(raw);
-    return isNaN(d) ? null : d;
+    if (isNaN(d)) return null;
+    const userTimezoneOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() + userTimezoneOffset);
 };
 
 const isoDate = (raw) => {
@@ -111,10 +135,11 @@ const fmtDateBR = (raw) => {
     return iso ? Utils.fmtBR(iso) : 'N/D';
 };
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const weekdayLabel = (raw) => {
     const d = parseDateRdo(raw);
-    return d ? WEEKDAYS[d.getDay()] : 'N/D';
+    if (!d) return 'N/D';
+    const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    return WEEKDAYS[d.getDay()];
 };
 
 export const UIDashboard = {
@@ -217,6 +242,8 @@ export const UIDashboard = {
         $('dashboard-content')?.classList.remove('hidden');
 
         destroyCharts();
+        resetRdoKpis();
+        showChartLoading('rdoHoursChart');
 
         let resumo = null;
         try {
@@ -271,6 +298,7 @@ export const UIDashboard = {
                 }
 
                 const rdoData = await rdoPromise;
+                const rdoReports = Array.isArray(rdoData?.reports) ? rdoData.reports : [];
                 let custoRdo = 0;
                 const PADRAO_DIA = 9;
                 const calcHorasReport = (rep) => {
@@ -298,8 +326,15 @@ export const UIDashboard = {
                 let horasExtras = 0;
                 let horasNormais = 0;
 
+                if (!rdoReports.length) {
+                    if (rdoHoursChart) { try { rdoHoursChart.destroy(); } catch { } }
+                    rdoHoursChart = null;
+                    showChartEmpty('rdoHoursChart');
+                    return;
+                }
+
                 if (rdoData) {
-                    const totals = (rdoData.reports || []).reduce((acc, rep) => {
+                    const totals = rdoReports.reduce((acc, rep) => {
                         const { normal, extra } = calcHorasReport(rep);
                         acc.normal += normal;
                         acc.extra += extra;
@@ -318,6 +353,7 @@ export const UIDashboard = {
                         if (cardTitle) {
                             cardTitle.innerHTML = `Análise de Horas (RDO)<br><span class="text-sm text-gray-500">Custo Est.: ${Utils.formatCurrency(custoRdo)}</span>`;
                         }
+                        hidePlaceholder(rdoCtxEl);
                         if (rdoHoursChart) rdoHoursChart.destroy();
                         rdoHoursChart = new Chart(rdoCtx, {
                             type: 'doughnut',
@@ -875,7 +911,7 @@ export const UIDashboard = {
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${Utils.escapeHtml(comprador)}</td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${Utils.escapeHtml(centro)}</td>
                 <td class="px-4 py-2 whitespace-nowrap text-sm text-center space-x-2">
-                    <button data-action="view-compra" data-id="${c.id}" class="btn-secondary btn-small" title="Visualizar">${VIEW_ICON}</button>
+                    <button data-action="view-compra" data-id="${c.id}" class="btn-secondary btn-small" title="Visualizar">${Icons.eye}</button>
                     <button data-action="edit-compra" data-id="${c.id}" class="btn-secondary btn-small">Editar</button>
                 </td>
             </tr>`;
@@ -1216,3 +1252,6 @@ export const UIDashboard = {
 };
 
 export { };
+
+
+

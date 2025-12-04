@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Rajdhani:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    /* Dark (default) */
+    --color-canvas: #121212;
+    --color-surface: #1c1c1e;
+    --color-border: #333333;
+    --color-primary: #22c55e;
+    --color-primary-strong: #16a34a;
+    --color-text: #e5e5e5;
+    --color-text-muted: #a1a1aa;
+    --color-alert: #ef4444;
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-display: 'Rajdhani', 'Inter', system-ui, sans-serif;
+    color-scheme: dark;
+}
+
+:root.theme-light {
+    /* Light palette */
+    --color-canvas: #f5f5f5;
+    --color-surface: #ffffff;
+    --color-border: #e5e7eb;
+    --color-text: #0b0b0b;
+    --color-text-muted: #374151;
+    color-scheme: light;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-canvas);
+        color: var(--color-text);
+        font-family: var(--font-sans, 'Inter', system-ui, sans-serif);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: var(--font-display, 'Rajdhani', 'Inter', system-ui, sans-serif);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-text);
+    }
+
+    a {
+        @apply text-primary hover:text-primary-strong;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply px-4 py-2 bg-primary text-canvas border border-primary font-display uppercase tracking-wide text-sm shadow-heavy transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded;
+    }
+
+    .btn:hover {
+        @apply bg-primary-strong border-primary-strong;
+    }
+
+    .btn-secondary {
+        @apply px-4 py-2 bg-surface text-text border border-border font-display uppercase tracking-wide text-sm shadow-heavy transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 rounded;
+    }
+
+    .btn-secondary:hover {
+        @apply border-primary text-primary;
+    }
+
+    .input {
+        @apply w-full px-3 py-2 bg-surface border border-border rounded text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-150;
+    }
+
+    .card {
+        @apply bg-surface border border-border shadow-heavy p-6 rounded;
+    }
+
+    .heading-muted {
+        @apply text-text-muted font-sans normal-case tracking-normal;
+    }
+
+    .accent-left {
+        border-left: 4px solid var(--color-primary);
+    }
+
+    .accent-top {
+        border-top: 4px solid var(--color-primary);
+    }
+}
+
+/* Light theme overrides for Tailwind utility classes generated with fixed colors */
+:root.theme-light .bg-canvas { background-color: var(--color-canvas) !important; }
+:root.theme-light .bg-surface { background-color: var(--color-surface) !important; }
+:root.theme-light .border-border { border-color: var(--color-border) !important; }
+:root.theme-light .text-text { color: var(--color-text) !important; }
+:root.theme-light .text-text-muted { color: var(--color-text-muted) !important; }
+:root.theme-light .heading-muted { color: var(--color-text-muted) !important; }
+:root.theme-light .card { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+:root.theme-light header, :root.theme-light aside { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; }
+:root.theme-light .bg-canvas .card, :root.theme-light main { background-color: var(--color-canvas) !important; }
+:root.theme-light ::-webkit-scrollbar-thumb { background: #d1d5db; border-color: #e5e7eb; }
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+    border: 2px solid #1c1c1e;
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #16a34a;
+}

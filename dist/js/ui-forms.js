@@ -229,14 +229,22 @@ export const UIForms = {
         renderList('lista-compradores', state.cache.compradores, 'comprador', c => `${Utils.escapeHtml(c.nome)} ${c.email ? `(${Utils.escapeHtml(c.email)})` : ''}`);
     },
 
-    renderObrasPage: () => {
+    renderObrasTableBody: (searchTerm = '') => {
         const podeEditar = state.currentUser?.role === 'diretor' || state.currentUser?.role === 'comprador' || state.currentUser?.role === 'obra';
         const podeExcluir = state.currentUser?.role === 'diretor';
+        const term = (searchTerm || '').toLowerCase();
+        const obras = (state.cache.obras || []).filter(o => {
+            if (!term) return true;
+            return (o.nome_obra || '').toLowerCase().includes(term)
+                || (o.numero_os || '').toLowerCase().includes(term)
+                || (o.cliente || '').toLowerCase().includes(term);
+        });
 
-        const obras = state.cache.obras;
+        const tbody = $('obras-table-body');
+        if (!tbody) return;
 
-        const tableHTML = obras.length === 0
-            ? `<tr><td colspan="5" class="p-4 text-center text-[var(--text-secondary)]">Nenhuma obra cadastrada.</td></tr>`
+        tbody.innerHTML = obras.length === 0
+            ? `<tr><td colspan="5" class="p-4 text-center text-[var(--text-secondary)]">Nenhuma obra encontrada.</td></tr>`
             : obras.map(o => {
                 const statusOptions = ['Não Iniciada', 'Em Andamento', 'Finalizada'].map(s => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('');
 
@@ -257,24 +265,37 @@ export const UIForms = {
                         <td class="px-4 py-2 flex items-center gap-2 flex-wrap">${viewButton}${editButton}${deleteButton}</td>
                     </tr>`;
             }).join('');
+    },
 
-        const fullTable = `
-            <table class="min-w-full divide-y divide-[var(--border-color)]">
-                <thead class="bg-gray-50"><tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Nome da Obra</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Número O.S.</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Cliente</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Status</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Ações</th>
-                </tr></thead>
-                <tbody class="divide-y divide-[var(--border-color)]">${tableHTML}</tbody>
-            </table>`;
+    renderObrasPage: () => {
+        const wrapper = $('obras-table-wrapper');
+        if (!wrapper) return;
 
-        const oldTableBody = $('obras-table-body');
-        if (oldTableBody) oldTableBody.innerHTML = tableHTML;
+        if (!document.getElementById('obras-local-search')) {
+            wrapper.innerHTML = `
+                <div class="flex items-center justify-between mb-3">
+                    <input id="obras-local-search" class="input w-full" placeholder="Buscar obra por nome, OS ou cliente..." />
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-[var(--border-color)]">
+                        <thead class="bg-gray-50"><tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Nome da Obra</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Número O.S.</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Cliente</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-[var(--text-secondary)] uppercase">Ações</th>
+                        </tr></thead>
+                        <tbody id="obras-table-body" class="divide-y divide-[var(--border-color)]"></tbody>
+                    </table>
+                </div>`;
 
-        const newTableWrapper = $('obras-table-wrapper');
-        if (newTableWrapper) newTableWrapper.innerHTML = fullTable;
+            const searchInput = document.getElementById('obras-local-search');
+            searchInput?.addEventListener('input', (e) => {
+                UIForms.renderObrasTableBody(e.target.value || '');
+            });
+        }
+
+        UIForms.renderObrasTableBody('');
     },
 
     showObraEditModal: (obraId) => {

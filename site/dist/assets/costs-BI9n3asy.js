@@ -1,0 +1,1 @@
+const O=50,R=75;export{O as COST_PER_HOUR,R as COST_PER_OVERTIME_HOUR};

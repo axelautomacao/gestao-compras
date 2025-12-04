@@ -1,0 +1,1733 @@
+﻿?<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Compras de Obras (Axel v10)</title>
+    <!-- 
+        Firebase Configuration (Placeholder)
+        IMPORTANTE: Estes valores são placeholders. A configuração real é carregada via env.js.
+        Estes meta tags servem apenas como fallback se env.js não estiver disponível.
+        Para configurar: edite o arquivo env.js na raiz do projeto.
+    -->
+    <meta name="VITE_FIREBASE_API_KEY" content="SUA_API_KEY">
+    <meta name="VITE_FIREBASE_AUTH_DOMAIN" content="seu-projeto.firebaseapp.com">
+    <meta name="VITE_FIREBASE_PROJECT_ID" content="seu-projeto-id">
+    <meta name="VITE_FIREBASE_STORAGE_BUCKET" content="seu-projeto.appspot.com">
+    <meta name="VITE_FIREBASE_MESSAGING_SENDER_ID" content="000000000000">
+    <meta name="VITE_FIREBASE_APP_ID" content="1:000000000000:web:xxxxxxxxxxxxxx">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vis-timeline@7.7.2/dist/vis-timeline-graph2d.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="./images/favicon.png">
+
+    <!-- Base -->
+    <link rel="stylesheet" href="./css/main.css">
+    <!-- Fase 1: Melhorias Visuais (deve sobrepor main) -->
+    <link rel="stylesheet" href="./css/phase1-improvements.css">
+    <link rel="stylesheet" href="./css/login-animation.css">
+</head>
+
+<body class="bg-gray-100 font-poppins">
+
+    <!-- ========================================== -->
+    <!-- TELA DE TRANSIÇÃO (LOADER) -->
+    <!-- ========================================== -->
+    <div id="loader" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center">
+        <!-- Container do Logo -->
+        <img id="logo-container" src="./images/logo_axel__principal.png" class="w-48 h-auto" />
+        <!-- Fim do Logo -->
+        <p class="mt-4 text-lg font-medium text-gray-700" id="loading-message">Conectando ao banco de dados...</p>
+    </div>
+
+    <dialog id="authModal" class="p-0 rounded-lg shadow-xl w-full max-w-sm z-50 overflow-hidden">
+
+        <div id="auth-login-view">
+            <form id="form-login" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Login - Gestão de Compras</h3>
+                <div id="login-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" type="email" class="input" required />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Senha</label>
+                    <input name="password" type="password" class="input" required />
+                </div>
+
+                <div class="flex justify-between items-center text-sm">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="check-remember-me" name="remember"
+                            class="h-4 w-4 rounded text-[var(--axel-green)] border-gray-300 focus:ring-[var(--axel-green)]">
+                        <label for="check-remember-me" class="text-gray-600">Lembrar-me</label>
+                    </div>
+                    <button type="button" id="btn-forgot-password" class="btn-link text-xs">Esqueci a senha</button>
+                </div>
+
+                <button type="submit" class="btn w-full">Entrar</button>
+                <p class="text-sm text-center">Não tem uma conta? <button type="button" id="btn-show-signup"
+                        class="btn-link">Registe-se</button></p>
+            </form>
+        </div>
+
+        <div id="auth-signup-view" class="hidden">
+            <form id="form-signup" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Criar Conta</h3>
+                <div id="signup-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Seu Nome</label><input name="nome"
+                        type="text" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Email</label><input name="email"
+                        type="email" class="input" required /></div>
+                <div><label class="block text-sm font-medium text-gray-700">Senha (mín. 6 caracteres)</label><input
+                        name="password" type="password" class="input" required minlength="6" /></div>
+                <button type="submit" class="btn w-full">Criar Conta</button>
+                <p class="text-sm text-center">Já tem uma conta? <button type="button" id="btn-show-login"
+                        class="btn-link">Fazer Login</button></p>
+            </form>
+        </div>
+
+        <div id="auth-forgot-view" class="hidden">
+            <form id="form-forgot-password" class="p-6 space-y-4">
+                <h3 class="text-xl font-medium text-center">Redefinir Senha</h3>
+                <div id="forgot-success" class="hidden p-2 bg-green-100 text-green-700 text-sm rounded-md"></div>
+                <div id="forgot-error" class="hidden p-2 bg-red-100 text-red-700 text-sm rounded-md"></div>
+
+                <p class="text-sm text-gray-600">Insira o seu email. Enviaremos um link para você criar uma nova
+                    senha.
+                </p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" type="email" class="input" required />
+                </div>
+
+                <button type="submit" class="btn w-full">Enviar Link</button>
+                <p class="text-sm text-center"><button type="button" id="btn-show-login-from-forgot"
+                        class="btn-link">Voltar ao Login</button></p>
+            </form>
+        </div>
+
+    </dialog>
+
+    <dialog id="pdfModal" class="w-[90vw] h-[90vh] p-0 rounded-xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
+            <div class="font-medium" id="pdfTitle">Visualizando PDF</div>
+            <div class="space-x-2">
+                <a id="btnDownloadPdf" href="#" download="download.pdf" class="btn-secondary btn-small"
+                    target="_blank">Baixar PDF</a>
+                <button id="btnClosePdf" class="btn-secondary btn-small">Fechar</button>
+            </div>
+        </div>
+        <div id="pdfContainer" class="w-full h-[calc(90vh-48px)] overflow-auto bg-gray-200">
+            <div id="pdfLoader" class="flex justify-center items-center h-full text-gray-500">Carregando...</div>
+        </div>
+    </dialog>
+
+    <dialog id="confirmModal" class="p-6 rounded-lg shadow-xl z-50">
+        <h3 class="text-lg font-medium" id="confirmTitle">Confirmar Ação</h3>
+        <p class="py-4" id="confirmMessage">Você tem certeza?</p>
+        <div class="flex justify-end space-x-2">
+            <button id="btnConfirmCancel" class="btn-secondary">Cancelar</button>
+            <button id="btnConfirmOk" class="btn-danger">Confirmar</button>
+        </div>
+    </dialog>
+
+    <dialog id="alertCenter" class="p-0 rounded-xl shadow-2xl w-full max-w-3xl">
+        <div class="p-6 space-y-4">
+            <div class="flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h3 class="text-xl font-semibold">Notificações</h3>
+                    <p class="text-sm text-gray-500">Compras em atraso, sem previsão ou pendentes.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 items-center">
+                    <label class="text-xs text-gray-600">Urgência
+                        <select id="alert-filter-urgencia" class="input mt-1 w-full">
+                            <option value="all">Todas</option>
+                            <option value="atrasados">Atrasadas</option>
+                            <option value="sem_previsao">Sem previsão</option>
+                            <option value="pendente_aprovacao">Pendentes aprovação</option>
+                            <option value="cotacao">Cotação 7+ dias</option>
+                        </select>
+                    </label>
+                    <label class="text-xs text-gray-600">Status
+                        <select id="alert-filter-status" class="input mt-1 w-full">
+                            <option value="all">Todos</option>
+                            <option value="pendente">Pendente</option>
+                            <option value="andamento">Em andamento</option>
+                            <option value="recebido">Recebido</option>
+                        </select>
+                    </label>
+                    <button data-close-alert type="button" class="btn-secondary btn-small">Fechar</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="border rounded-lg p-4 bg-amber-50 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-600">Compras em atraso</div>
+                        <div class="text-2xl font-bold text-amber-700" data-alert-count="atrasados">0</div>
+                    </div>
+                    <button class="btn-secondary btn-small" data-action="view-alert-items"
+                        data-alert="atrasados">Ver</button>
+                </div>
+                <div class="border rounded-lg p-4 bg-gray-50 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-600">Sem previsão</div>
+                        <div class="text-2xl font-bold text-gray-700" data-alert-count="sem_previsao">0</div>
+                    </div>
+                    <button class="btn-secondary btn-small" data-action="view-alert-items"
+                        data-alert="sem_previsao">Ver</button>
+                </div>
+                <div class="border rounded-lg p-4 bg-blue-50 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-600">Pendentes de aprovação</div>
+                        <div class="text-2xl font-bold text-blue-700" data-alert-count="pendente_aprovacao">0</div>
+                    </div>
+                    <button class="btn-secondary btn-small" data-action="view-alert-items"
+                        data-alert="pendente_aprovacao">Ver</button>
+                </div>
+                <div class="border rounded-lg p-4 bg-purple-50 flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-600">Cotação (7+ dias)</div>
+                        <div class="text-2xl font-bold text-purple-700" data-alert-count="cotacao">0</div>
+                    </div>
+                    <button class="btn-secondary btn-small" data-action="view-alert-items"
+                        data-alert="cotacao">Ver</button>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="userModal" class="p-0 rounded-xl shadow-2xl w-full max-w-2xl">
+        <div class="flex justify-between items-center px-4 py-3 border-b">
+            <div>
+                <h3 id="userModalTitle" class="text-lg font-semibold">Usuário</h3>
+                <p class="text-sm text-gray-500">Defina papéis e obra padrão.</p>
+            </div>
+            <button id="btnUserModalClose" class="btn-secondary btn-small">Fechar</button>
+        </div>
+        <form id="form-user-modal" class="p-6 space-y-4">
+            <div id="user-modal-error" class="text-red-600 text-sm"></div>
+            <input type="hidden" id="user-id" name="id">
+            <input type="hidden" id="user-uid" name="uid">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nome *</label>
+                    <input id="user-nome" class="input mt-1" required />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">E-mail</label>
+                    <input id="user-email" type="email" class="input mt-1" />
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Papel</label>
+                    <select id="user-role" class="input mt-1">
+                        <option value="obra">Obra</option>
+                        <option value="comprador">Comprador</option>
+                        <option value="financeiro">Financeiro</option>
+                        <option value="diretor">Diretor</option>
+                        <option value="administrador">Administrador</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Obra padrão</label>
+                    <select id="user-obra" class="input mt-1"></select>
+                </div>
+                <label class="flex items-center gap-2 text-sm mt-7">
+                    <input id="user-ativo" type="checkbox" class="h-4 w-4" checked> Ativo
+                </label>
+            </div>
+            <div class="flex justify-between items-center pt-3 border-t">
+                <button type="button" id="btnUserDelete" class="btn-secondary btn-small hidden">Excluir</button>
+                <div class="space-x-2">
+                    <button type="button" id="btnUserCancel" class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn">Salvar</button>
+                </div>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="compraEditModal" class="p-0 rounded-lg shadow-xl w-full max-w-3xl z-50">
+        <div class="p-6">
+            <h3 class="text-xl font-medium mb-4">Editar Compra</h3>
+            <div id="edit-orcamento-resumo" class="orcamento-resumo-grid mb-4 hidden"></div>
+            <form id="form-edit-compra" class="space-y-4">
+                <input type="hidden" name="id">
+                <input type="hidden" name="retirada_estoque" id="edit-retirada-estoque">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Obra / O.S. *</label><select
+                            name="obraId" class="input mt-1" required></select></div>
+
+                    <div><label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                        <div class="input-group mt-1">
+                            <select name="fornecedorId"></select>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                        <div class="input-group mt-1">
+                            <select name="compradorId" required></select>
+                        </div>
+                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700">Solicitante *</label><input
+                            name="solicitante" class="input mt-1" required /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Número NF-e *</label><input
+                            name="numero_nf" class="input mt-1" required pattern="[0-9]*"
+                            title="Apenas números são permitidos." /></div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                    <div class="input-group mt-1">
+                        <select name="centroCustoId" required></select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Apelido da Compra</label>
+                    <input name="apelido_compra" class="input mt-1 w-full" placeholder="Ex.: Compra Painel Lote 1" />
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Nome *</label><input name="nome"
+                            class="input" required /></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Código</label><input name="codigo"
+                            class="input" /></div>
+                    <div class="flex justify-end space-x-2 pt-4"><button type="button" id="btnEditCentroCustoCancel"
+                            class="btn-secondary">Cancelar</button><button type="submit" class="btn">Salvar
+                            Alterações</button></div>
+            </form>
+        </div>
+    </dialog>
+
+    <div class="flex hidden dashboard-content" id="main-layout">
+        <aside id="sidebar"
+            class="w-64 bg-gray-800 text-white h-screen sticky top-0 flex flex-col flex-shrink-0 transition-transform duration-200 transform -translate-x-full md:translate-x-0 md:static md:block"
+            data-collapsible="true">
+
+            <div class="p-6 flex items-center justify-center border-b border-gray-700">
+                <img src="./images/logo_axel__principal.png" alt="Logo da Axel" class="h-10 w-auto">
+            </div>
+
+            <nav id="navigation" class="flex-grow p-4 space-y-1">
+            </nav>
+
+            <div class="p-4 border-t border-gray-700">
+                <div id="user-info" class="text-xs text-gray-400 mb-2 truncate" title="Utilizador Logado">...</div>
+                <button id="btn-logout" class="btn-danger w-full btn-small !py-2">Sair</button>
+            </div>
+        </aside>
+
+        <main id="content-area" class="flex-grow h-screen overflow-y-auto">
+                        <header
+                class="sticky top-0 z-40 bg-[var(--bg-primary)]/95 backdrop-blur border-b border-[var(--border-color)]">
+                <div
+                    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <button id="btn-toggle-sidebar" class="btn-secondary btn-small !py-2 !px-3" title="Abrir/fechar menu">&#9776;</button>
+                        <div class="relative w-full">
+                            <input id="global-search" type="search" class="input pl-3 pr-10 w-full" placeholder="Buscar compras, obras ou fornecedores..." />
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&#8981;</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <button id="btn-theme-toggle" class="btn-secondary btn-small !py-2 !px-3" title="Alternar Tema (Claro/Escuro)" aria-label="Alternar Tema">
+                            <span id="theme-icon-sun">&#9728;</span>
+                            <span id="theme-icon-moon" class="hidden">&#9790;</span>
+                        </button>
+                        <button id="btn-open-alert-center" class="btn-secondary btn-small !py-2 !px-3 relative" title="Notificações" aria-label="Notificações">
+                            &#128276;
+                            <span id="notifications-badge" class="hidden absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full px-2 py-0.5 leading-none">0</span>
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <div class="h-8 w-8 rounded-full bg-[var(--axel-green)] text-white flex items-center justify-center text-sm font-semibold">AX</div>
+                            <div class="text-left leading-tight">
+                                <div class="text-sm font-semibold" id="user-name-top">Usuário</div>
+                                <div class="text-xs text-[var(--text-secondary)]" id="user-role-top">--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8 space-y-6">
+
+                <section id="page-dashboard-geral" class="page active space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Dashboard Geral</h2>
+                        <div id="dashboard-geral-kpis" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="card text-center bg-gray-50 border border-gray-200">
+                                <div class="text-sm font-medium text-gray-500">Obras Ativas</div>
+                                <div id="kpi-geral-obras" class="text-2xl font-bold text-gray-700">-</div>
+                            </div>
+                            <div class="card text-center bg-gray-50 border border-gray-200">
+                                <div class="text-sm font-medium text-gray-500">Orçamento Total</div>
+                                <div id="kpi-geral-orcamento" class="text-2xl font-bold text-blue-600">-</div>
+                            </div>
+                            <div class="card text-center bg-gray-50 border border-gray-200">
+                                <div class="text-sm font-medium text-gray-500">Comprometido Total</div>
+                                <div id="kpi-geral-Gasto" class="text-2xl font-bold text-red-600">-</div>
+                            </div>
+                            <div class="card text-center bg-gray-50 border border-gray-200">
+                                <div class="text-sm font-medium text-gray-500">% Orçamento Usado</div>
+                                <div id="kpi-geral-percent" class="text-2xl font-bold text-gray-700">-</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                            <div class="card text-center bg-emerald-50 border border-emerald-200">
+                                <div class="text-sm font-medium text-gray-500">Economia Gerada</div>
+                                <div id="kpi-geral-economia" class="text-2xl font-bold text-emerald-700">-</div>
+                            </div>
+                            <div class="card text-center bg-indigo-50 border border-indigo-200">
+                                <div class="text-sm font-medium text-gray-500">SLA Entregas</div>
+                                <div id="kpi-geral-sla" class="text-2xl font-bold text-indigo-700">-</div>
+                            </div>
+                            <div class="card text-center bg-amber-50 border border-amber-200">
+                                <div class="text-sm font-medium text-gray-500">Lead Time Médio</div>
+                                <div id="kpi-geral-lead" class="text-2xl font-bold text-amber-700">-</div>
+                            </div>
+                            <div class="card text-center bg-rose-50 border border-rose-200">
+                                <div class="text-sm font-medium text-gray-500">Compras em Atraso</div>
+                                <div id="kpi-geral-atrasos" class="text-2xl font-bold text-rose-700">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card">
+                            <h3 class="text-lg font-medium text-center mb-2">% Orçamento Consumido por Obra</h3>
+                            <canvas id="barChartGeral"></canvas>
+                        </div>
+                        <div class="card">
+                            <h3 class="text-lg font-medium text-center mb-2">Gastos Totais por Natureza</h3><canvas
+                                id="pieChartGeral"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-medium text-center mb-2">Evolução de Compras (Por Mês)</h3>
+                        <canvas id="lineChartGeral"></canvas>
+                    </div>
+                </section>
+
+                <section id="page-dashboard" class="page space-y-6">
+                    <div class="card">
+                        <h2 id="dashboard-title" class="text-xl font-bold text-center mb-4">Selecione a Obra para
+                            Análise</h2>
+                        <div class="w-full max-w-xl mx-auto space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="dashboard-search-query" type="text" class="input"
+                                    placeholder="Buscar por Nome/OS...">
+                                <select id="dashboard-status-filter" class="input">
+                                    <option value="Ativas">Ativas (Não Iniciada / Em Andamento)</option>
+                                    <option value="Todas">Todas</option>
+                                    <option value="Não Iniciada">Não Iniciada</option>
+                                    <option value="Em Andamento">Em Andamento</option>
+                                    <option value="Finalizada">Finalizada</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Selecione a Obra:</label>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <select id="dashboard-obra-select" class="input w-full">
+                                        <option value="">-- Use os filtros acima --</option>
+                                    </select>
+                                    <button id="btn-dashboard-refresh" class="btn-secondary btn-small !p-2 hidden"
+                                        title="Atualizar dados da obra">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                            stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 id="dashboard-analysis-title" class="text-2xl font-bold text-center -my-2 hidden"></h2>
+                    <div id="dashboard-alert"
+                        class="hidden mt-2 px-4 py-3 rounded border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                    </div>
+
+                    <div id="dashboard-content" class="hidden space-y-6">
+                        <!-- KPIs Principais -->
+                        <div class="card space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-800">KPIs Principais</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-emerald-50 border border-emerald-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Total Orçado</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4 19h16M7 16v-5m5 5V9m5 7V5" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-combined-total" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-rose-50 border border-rose-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Total Executado</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M5 12h4l2 5 2-10 2 5h4" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-combined-gasto" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-indigo-50 border border-indigo-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Diferença</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16M12 4v16" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-combined-diff" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-sky-50 border border-sky-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>% Gasto Total</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4 4l16 16M8 8a4 4 0 108 0 4 4 0 00-8 0z" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-combined-percent" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <h4 class="text-base font-semibold mb-2 text-gray-700 text-center">Comparação Orçado
+                                    vs
+                                    Executado (Materiais + Mão de Obra)</h4>
+                                <canvas id="combinedStackedChart" style="height:180px; max-height:180px;"></canvas>
+                            </div>
+                        </div>
+
+
+                        <div id="mao-obra-section" class="card space-y-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-semibold">An&aacute;lise de M&atilde;o de Obra</h3>
+                                <span class="text-xs text-gray-500">Integrado via RDO</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-stretch">
+                                <div class="p-4 border rounded-lg bg-gray-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">Horas Previstas (Normais + Extras)</div>
+                                    <div id="kpi-horas-previstas" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-indigo-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">Horas Executadas (RDO)</div>
+                                    <div id="kpi-horas-executadas" class="text-2xl font-bold text-indigo-700"></div>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-amber-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">Saldo de Horas</div>
+                                    <div id="kpi-horas-saldo" class="text-2xl font-bold text-amber-700"></div>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-emerald-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">Custo Est. M&atilde;o de Obra</div>
+                                    <div id="kpi-custo-mao" class="text-2xl font-bold text-emerald-700"></div>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-orange-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">Horas Extras (total)</div>
+                                    <div id="kpi-horas-extras-total" class="text-2xl font-bold text-orange-700">
+                                    </div>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-sky-50 h-full flex flex-col justify-between">
+                                    <div class="text-sm text-gray-500">% Extras / Horas Normais</div>
+                                    <div id="kpi-horas-extras-percent" class="text-2xl font-bold text-sky-700">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Horas Previstas
+                                        vs
+                                        Realizadas</h4>
+                                    <canvas id="hoursCompareChart" style="height:260px; max-height:260px;"></canvas>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">
+                                        Evolu&ccedil;&atilde;o Di&aacute;ria de Horas</h4>
+                                    <canvas id="hoursDailyChart" style="height:260px; max-height:260px;"></canvas>
+                                </div>
+                            </div>
+                            <div class="p-4 border rounded-lg bg-white">
+                                <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Curva S de Horas
+                                </h4>
+                                <canvas id="curveHoursChart" style="height:280px; max-height:280px;"></canvas>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">
+                                        Distribui&ccedil;&atilde;o de Horas</h4>
+                                    <canvas id="rdoHoursChart" style="height:260px; max-height:260px;"></canvas>
+                                </div>
+                                <div class="p-4 border rounded-lg bg-white">
+                                    <h4 class="text-sm font-semibold mb-2 text-gray-700 text-center">Top
+                                        T&eacute;cnicos
+                                        (horas)</h4>
+                                    <table class="min-w-full text-sm">
+                                        <thead class="text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th class="px-2 py-1 text-left">T&eacute;cnico</th>
+                                                <th class="px-2 py-1 text-right">Horas</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rdo-tech-table" class="divide-y divide-gray-200">
+                                            <tr>
+                                                <td class="px-2 py-2 text-center text-gray-400" colspan="2">Sem
+                                                    dados
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="p-4 border rounded-lg bg-white">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-semibold text-gray-700">Relat&oacute;rios RDO</h4>
+                                    <span class="text-xs text-gray-500">&Uacute;ltimos registros</span>
+                                </div>
+                                <div class="overflow-auto max-h-72">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left">Data</th>
+                                                <th class="px-3 py-2 text-left">Dia</th>
+                                                <th class="px-3 py-2 text-right">Horas</th>
+                                                <th class="px-3 py-2 text-right">Horas Extras</th>
+                                                <th class="px-3 py-2 text-center">T&eacute;cnicos</th>
+                                                <th class="px-3 py-2 text-center">Hor&aacute;rio</th>
+                                                <th class="px-3 py-2 text-center">N&ordm; Relat&oacute;rio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="rdo-table-body" class="divide-y divide-gray-200">
+                                            <tr>
+                                                <td class="px-3 py-2 text-center text-gray-400" colspan="7">Sem
+                                                    dados
+                                                    RDO</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card space-y-6">
+                            <h3 class="text-lg font-semibold text-gray-800">An&aacute;lise de Gastos com Materiais
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Or&ccedil;amento Materiais</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-orcado" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Gasto Materiais</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M5 11h4l2 5 2-10 2 5h4" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-gasto" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Balan&ccedil;oo Materiais</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16M12 4v16" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-balanco" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-gray-50 border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>% Gasto Materiais</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-percent" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Total de Compras</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4 6h16M4 12h10m-6 6h6" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-qt-total" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Aguardando Entrega</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l3 3" />
+                                            <circle cx="12" cy="12" r="8" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-qt-aguardando" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Compras Recebidas</span>
+                                        <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-qt-recebidas" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="flex items-center justify-between text-sm font-medium text-gray-500">
+                                        <span>Compras em Atraso</span>
+                                        <svg class="w-4 h-4 text-rose-500" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v5l3 3" />
+                                            <circle cx="12" cy="12" r="9" />
+                                        </svg>
+                                    </div>
+                                    <div id="kpi-qt-atraso" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Economia Gerada</div>
+                                    <div id="kpi-obra-economia" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">SLA de Entregas</div>
+                                    <div id="kpi-obra-sla" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Lead Time M&eacute;dio</div>
+                                    <div id="kpi-obra-lead" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                                <div class="card text-center bg-white border border-gray-200">
+                                    <div class="text-sm font-medium text-gray-500">Curva S Planejado vs Real</div>
+                                    <div id="kpi-obra-curva" class="text-2xl font-bold text-gray-800"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                                <div class="card h-full">
+                                    <h3 class="text-lg font-medium text-center mb-2">An&aacute;lise Comparativa de
+                                        Custos</h3>
+                                    <canvas id="barChart" style="height:360px; max-height:360px;"></canvas>
+                                </div>
+                                <div class="card h-full">
+                                    <h3 class="text-lg font-medium text-center mb-2">Gasto por Natureza</h3>
+                                    <canvas id="pieChart" style="height:360px; max-height:360px;"></canvas>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <h3 class="text-lg font-medium text-center mb-2">Curva S Detalhada (Planejado vs
+                                    Real)
+                                </h3>
+                                <p class="text-sm text-gray-500 text-center mb-4">Valores acumulados mensais da obra
+                                    selecionada.</p>
+                                <canvas id="curveSDetail" style="height:320px;"></canvas>
+                            </div>
+                            <div class="card">
+                                <div class="flex justify-between items-center mb-2">
+                                    <h3 class="text-lg font-medium text-center">Gasto por Centro de Custo</h3>
+                                    <button id="btn-clear-cc-filter" class="btn-secondary btn-small hidden">Limpar
+                                        Filtro</button>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="max-w-xs mx-auto"><canvas id="donutChart"></canvas></div>
+                                    <div id="cc-drilldown-table-wrapper" class="overflow-auto max-h-60">
+                                        <table class="min-w-full text-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">
+                                                        Centro de Custo</th>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">
+                                                        Valor</th>
+                                                    <th class="px-3 py-2 text-left text-xs text-gray-500 uppercase">
+                                                        % do
+                                                        Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="cc-summary-table" class="divide-y divide-gray-200"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h3 class="text-lg font-medium">Calend&aacute;rio de Compras</h3>
+                                        <p class="text-sm text-gray-500">Emiss&atilde;oo, previs&atilde;o e
+                                            recebimento.
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-2 items-center">
+                                        <button id="btn-calendar-prev" class="btn-secondary btn-small">`n                            ?`n                        </button>
+                                        <button id="btn-calendar-next" class="btn-secondary btn-small">`n                            ?`n                        </button>
+                                        <select id="calendar-filter-type" class="input">
+                                            <option value="all">Tudo</option>
+                                            <option value="compra">Emiss&atilde;oo</option>
+                                            <option value="previsao">Previs&atilde;o</option>
+                                            <option value="recebimento">Recebimento</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div id="dashboard-calendar" class="w-full h-80 border rounded-lg bg-white"></div>
+                            </div>
+                            <div class="card">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-bold">Hist&oacute;rico de Compras da Obra</h3>
+                                    <button id="btn-export-csv" class="btn-secondary btn-small">Exportar
+                                        CSV</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Data Solicita&ccedil;&atilde;o</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Status</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Data Compra</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Prev. Entrada</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Valor</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Comprador</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                    Centro de Custo</th>
+                                                <th
+                                                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase text-center">
+                                                    A&ccedil;&otilde;es</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dashboard-table-body" class="divide-y divide-gray-200"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-obras" class="page">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gestão de Obras</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Nome
+                                            da Obra</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Número O.S.</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Cliente</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Status</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                            Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="obras-table-body" class="divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-relatorio-compras" class="page">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Relatório e Gestão de Compras</h2>
+
+                        <!-- 
+                            FILTROS RÁPIDOS
+                            Permite busca rápida com campos únicos (IDs terminam com -top)
+                            Para filtros avançados com seleção múltipla, veja seção abaixo.
+                        -->
+                        <div class="space-y-4 mb-4 p-4 border rounded-lg bg-gray-50">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                                    <div class="input-group mt-1">
+                                        <select id="report-filter-fornecedor-top" name="fornecedorId"></select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Comprador *</label>
+                                    <div class="input-group mt-1">
+                                        <select id="report-filter-comprador-top" name="compradorId" required></select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Numero NF-e *</label>
+                                    <input id="report-filter-numero" name="numero_nf" class="input mt-1" required
+                                        pattern="[0-9]*" title="Apenas numeros sao permitidos." />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Centro de Custo *</label>
+                                <div class="input-group mt-1">
+                                    <select id="report-filter-centrocusto-top" name="centroCustoId" required></select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Descricao da Compra</label>
+                                <textarea id="report-filter-descricao" name="descricao_compra" rows="2"
+                                    class="input mt-1 w-full"
+                                    placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Data Emissão
+                                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por
+                                                Fornecedor</label><select id="report-filter-fornecedor" class="input"
+                                                multiple size="4"></select></div>
+                                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por
+                                                Comprador</label><select id="report-filter-comprador" class="input"
+                                                multiple size="4"></select></div>
+                                </div>
+                                <p class="text-xs text-gray-500">Dica: Segure CTRL (ou CMD) para selecionar múltiplos
+                                    itens
+                                    nas listas.</p>
+                                <div class="flex justify-end items-center">
+                                    <button id="btn-report-buscar" type="button" class="btn px-6 py-2">Buscar
+                                        Compras</button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center mb-4">
+                                <p class="text-sm text-gray-500">Escolha como quer visualizar os resultados:</p>
+                                <div class="flex gap-2">
+                                    <button id="view-table-toggle" class="btn btn-small">Tabela</button>
+                                    <button id="view-kanban-toggle" class="btn-secondary btn-small">Quadro
+                                        (Kanban)</button>
+                                </div>
+                            </div>
+
+                            <div id="kanban-board" class="hidden">
+                                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                    <div class="card" data-kanban-column="Nao iniciado">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold">Solicitado</h4>
+                                            <span class="text-xs text-gray-500"
+                                                data-kanban-count="Nao iniciado">0</span>
+                                        </div>
+                                        <div class="space-y-3" id="kanban-col-nao-iniciado"></div>
+                                    </div>
+                                    <div class="card" data-kanban-column="Em cotacao">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold">Em Cotação</h4>
+                                            <span class="text-xs text-gray-500" data-kanban-count="Em cotacao">0</span>
+                                        </div>
+                                        <div class="space-y-3" id="kanban-col-em-cotacao"></div>
+                                    </div>
+                                    <div class="card" data-kanban-column="Aprovado">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold">Aprovado</h4>
+                                            <span class="text-xs text-gray-500" data-kanban-count="Aprovado">0</span>
+                                        </div>
+                                        <div class="space-y-3" id="kanban-col-aprovado"></div>
+                                    </div>
+                                    <div class="card" data-kanban-column="Comprado">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold">Comprado</h4>
+                                            <span class="text-xs text-gray-500" data-kanban-count="Comprado">0</span>
+                                        </div>
+                                        <div class="space-y-3" id="kanban-col-comprado"></div>
+                                    </div>
+                                    <div class="card" data-kanban-column="Recebido">
+                                        <div class="flex justify-between items-center mb-2">
+                                            <h4 class="font-semibold">Recebido</h4>
+                                            <span class="text-xs text-gray-500" data-kanban-count="Recebido">0</span>
+                                        </div>
+                                        <div class="space-y-3" id="kanban-col-recebido"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="overflow-x-auto" id="report-table-wrapper">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer"
+                                                data-sort="obra">Obra (OS)</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="nf">NF-e</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="status">Status</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="recebimento">Data Receb.</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="emissao">Data Emissão</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="comprador">Comprador</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"
+                                                data-sort="valor">Valor</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                PDFs
+                                            </th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="report-table-body" class="divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                </section>
+
+                <section id="page-registro" class="page">
+                    <div class="max-w-4xl mx-auto space-y-4">
+                        <form id="form-compra" class="space-y-4">
+                            <div class="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                                <span class="font-semibold text-[var(--text-primary)]">Etapas:</span>
+                                <div class="flex gap-2 flex-wrap">
+                                    <span class="wizard-pill wizard-active" data-step-pill="1">1) Obra</span>
+                                    <span class="wizard-pill" data-step-pill="2">2) Financeiro</span>
+                                    <span class="wizard-pill" data-step-pill="3">3) Logística & Anexos</span>
+                                </div>
+                            </div>
+
+                            <div class="wizard-step" data-step="1">
+                                <div class="card space-y-4">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <h2 class="text-xl font-bold">Registrar Nova Compra</h2>
+                                            <p class="text-sm text-gray-500">Primeiro selecione a obra para carregar
+                                                o
+                                                orcamento.</p>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div class="md:col-span-2 space-y-2">
+                                            <label class="block text-sm font-medium text-gray-700">Buscar Obra
+                                                *</label>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <input id="registro-search-query" type="text" class="input"
+                                                    placeholder="Buscar por Nome/OS...">
+                                                <select id="registro-status-filter" class="input">
+                                                    <option value="Ativas">Ativas (Nao Iniciada / Em Andamento)
+                                                    </option>
+                                                    <option value="Todas">Todas</option>
+                                                </select>
+                                            </div>
+                                            <select name="obraId" id="registro-obra-select" class="input" required>
+                                                <option value="">-- Use os filtros acima --</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div id="registro-orcamento-resumo" class="orcamento-resumo-grid hidden"></div>
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" class="btn-secondary" data-action="wizard-prev"
+                                            disabled>Voltar</button>
+                                        <button type="button" class="btn" data-action="wizard-next"
+                                            data-next-step="2">Próximo</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wizard-step hidden" data-step="2">
+                                <div class="card space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Fornecedor</label>
+                                            <div class="input-group mt-1">
+                                                <select name="fornecedorId"></select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Comprador
+                                                *</label>
+                                            <div class="input-group mt-1">
+                                                <select name="compradorId" required></select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Solicitante
+                                                *</label>
+                                            <input name="solicitante" class="input mt-1" required
+                                                placeholder="Quem solicitou a compra" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Numero NF-e
+                                                *</label>
+                                            <input name="numero_nf" class="input mt-1" required pattern="[0-9]*"
+                                                title="Apenas numeros sao permitidos." />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Centro de Custo
+                                            *</label>
+                                        <div class="input-group mt-1">
+                                            <select name="centroCustoId" required></select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Descricao da
+                                            Compra</label>
+                                        <textarea name="descricao_compra" rows="2" class="input mt-1 w-full"
+                                            placeholder="Ex.: Materiais eletricos para painel, lote 1..."></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Apelido da Compra</label>
+                                        <input name="apelido_compra" class="input mt-1 w-full"
+                                            placeholder="Ex.: Compra Painel Lote 1" />
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Data da
+                                                solicitação</label>
+                                            <input name="data_solicitacao" type="date" class="input mt-1" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Data de Compra
+                                                *</label>
+                                            <input name="data_emissao" type="date" class="input mt-1" required />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Valor Total
+                                                (R$) *</label>
+                                            <input name="valor_total" data-mask="currency" class="input mt-1"
+                                                required />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Natureza da
+                                                Compra
+                                                *</label>
+                                            <select name="natureza_compra" class="input mt-1" required>
+                                                <option value="Lista de Material inicial">Lista de Material inicial
+                                                </option>
+                                                <option value="Material Adicional">Material Adicional</option>
+                                                <option value="Desperdicio">Desperdicio</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-start">
+                                        <div
+                                            class="flex items-center p-3 border rounded-lg bg-[var(--axel-green)] text-white gap-3">
+                                            <input id="registro-retirada-estoque" type="checkbox"
+                                                name="retirada_estoque"
+                                                class="h-4 w-4 rounded border-green-600 text-white focus:ring-green-700 bg-green-600 checked:bg-green-600 checked:border-green-700">
+                                            <label for="registro-retirada-estoque"
+                                                class="ml-2 block text-sm font-medium text-white">Retirada do
+                                                Estoque?</label>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between gap-2">
+                                        <button type="button" class="btn-secondary"
+                                            data-action="wizard-prev">Voltar</button>
+                                        <button type="button" class="btn" data-action="wizard-next"
+                                            data-next-step="3">Próximo</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="wizard-step hidden" data-step="3">
+                                <div class="card space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Previsao de
+                                                Entrega</label>
+                                            <input name="previsao_entrega" type="date" class="input mt-1" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Status da Compra
+                                                *</label>
+                                            <select name="status_compra" class="input mt-1" required>
+                                                <option value="Nao iniciado">Nao iniciado</option>
+                                                <option value="Em cotacao">Em cotacao</option>
+                                                <option value="Aprovado">Aprovado</option>
+                                                <option value="Comprado">Comprado</option>
+                                                <option value="Recebido">Recebido</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">Data de
+                                                Recebimento</label>
+                                            <input name="data_recebimento" type="date" class="input mt-1" />
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="border rounded-lg p-3">
+                                            <label class="block text-sm font-medium text-gray-700">PDF da NF-e
+                                                (Opcional,
+                                                max 20MB)</label>
+                                            <input name="pdf_nf" type="file" accept="application/pdf"
+                                                class="input mt-1 file:btn-secondary file:btn-small file:border-0 file:mr-2" />
+                                        </div>
+                                        <div class="border rounded-lg p-3">
+                                            <label class="block text-sm font-medium text-gray-700">PDF do CT-e
+                                                (Opcional,
+                                                max 20MB)</label>
+                                            <input name="pdf_cte" type="file" accept="application/pdf"
+                                                class="input mt-1 file:btn-secondary file:btn-small file:border-0 file:mr-2" />
+                                        </div>
+                                    </div>
+
+                                    <div id="registro-justificativa-wrapper" class="hidden">
+                                        <label class="block text-sm font-medium text-red-700">Justificativa de
+                                            Estouro
+                                            de
+                                            Orcamento *</label>
+                                        <textarea name="justificativa_estouro_orcamento" class="input mt-1 w-full"
+                                            rows="3"
+                                            placeholder="Descreva o motivo para ultrapassar o limite de orcamento..."></textarea>
+                                    </div>
+
+                                    <div class="flex justify-between">
+                                        <button type="button" class="btn-secondary"
+                                            data-action="wizard-prev">Voltar</button>
+                                        <button type="submit" class="btn px-6 py-3 text-base font-semibold">Salvar
+                                            Compra</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-obras" class="page space-y-6">
+                    <div id="cadastros-voltar-btn-wrapper" class="hidden">
+                        <button type="button" data-action="go-back" class="btn-secondary btn-small">?
+                            Voltar</button>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Cadastrar Nova Obra</h2>
+                        <form id="form-obra" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="obra-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome
+                                        da
+                                        Obra *</label>
+                                    <input id="obra-nome" name="nome_obra" class="input" required />
+                                </div>
+                                <div>
+                                    <label for="obra-os" class="block text-sm font-medium text-gray-700 mb-1">Número
+                                        da
+                                        O.S. (único) *</label>
+                                    <input id="obra-os" name="numero_os" class="input" required />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Apelido p/
+                                        Obra</label>
+                                    <input name="apelido" class="input" placeholder="Ex: Obra do Centro" />
+                                </div>
+                                <div>
+                                    <label for="obra-cliente"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+                                    <input id="obra-cliente" name="cliente" class="input" required />
+                                </div>
+                                <div>
+                                    <label for="obra-orcado" class="block text-sm font-medium text-gray-700 mb-1">Valor
+                                        Orçado (R$) *</label>
+                                    <input id="obra-orcado" name="valor_orcado" data-mask="currency" class="input"
+                                        required />
+                                </div>
+                                <div>
+                                    <label for="obra-tolerancia"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Tolerância (%)</label>
+                                    <input id="obra-tolerancia" name="tolerancia_percentual" type="number" step="0.1"
+                                        min="0" class="input" placeholder="Ex: 5" />
+                                </div>
+                            </div>
+                            <div>
+                                <label for="obra-descricao"
+                                    class="block text-sm font-medium text-gray-700 mb-1">Descrição da Obra</label>
+                                <textarea id="obra-descricao" name="descricao_obra" rows="2" class="input"
+                                    placeholder="Resumo da obra, escopo, etc."></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="obra-empresa"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Empresa *</label>
+                                    <input id="obra-empresa" name="empresa" class="input" required />
+                                </div>
+                                <div>
+                                    <label for="obra-local" class="block text-sm font-medium text-gray-700 mb-1">Local
+                                        de Realização</label>
+                                    <input id="obra-local" name="local_realizacao" class="input" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Data Prevista
+                                        Início</label>
+                                    <input name="data_prevista_inicio" type="date" class="input" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Data Prevista
+                                        Fim</label>
+                                    <input name="data_prevista_fim" type="date" class="input" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Horas
+                                        Previstas</label>
+                                    <input name="horas_previstas" type="number" step="0.1" class="input" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Horas Extras
+                                        Previstas</label>
+                                    <input name="horas_extras_previstas" type="number" step="0.1" class="input" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Valor Deslocamento
+                                        (Km)</label>
+                                    <input name="valor_deslocamento_km" data-mask="currency" class="input" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Qtde
+                                        Refeições</label>
+                                    <input name="qtd_refeicoes" type="number" class="input" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Qtde
+                                        Hospedagens</label>
+                                    <input name="qtd_hospedagens" type="number" class="input" />
+                                </div>
+                                <div class="flex items-center gap-2 flex-1 min-w-0">
+                                    <input id="obra-filha-toggle" type="checkbox" name="is_obra_filha" class="h-4 w-4">
+                                    <label for="obra-filha-toggle" class="text-sm text-gray-700">Obra Filha?</label>
+                                </div>
+                                <div id="obra-filha-wrapper" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Obra Pai
+                                        (OS)</label>
+                                    <input name="obra_pai_os" class="input" placeholder="Informe a OS da obra pai">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn w-full py-2.5">Salvar Obra</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Obras Cadastradas</h2>
+                        <div id="obras-table-wrapper" class="overflow-x-auto">
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-compradores" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Compradores</h2>
+                        <form id="form-comprador" class="space-y-3 mb-4">
+                            <div>
+                                <label for="comprador-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome do
+                                    Comprador *</label>
+                                <input id="comprador-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="comprador-email" class="block text-sm font-medium text-gray-700 mb-1">Email
+                                    (Opcional)</label>
+                                <input id="comprador-email" name="email" type="email" class="input" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo Comprador</button>
+                        </form>
+                        <hr class="my-4">
+                        <h3 class="font-medium mb-2">Compradores Cadastrados:</h3>
+                        <ul id="lista-compradores" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-fornecedores" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Fornecedores</h2>
+                        <form id="form-fornecedor" class="space-y-3 mb-4">
+                            <div>
+                                <label for="fornecedor-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome
+                                    do Fornecedor *</label>
+                                <input id="fornecedor-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="fornecedor-cnpj" class="block text-sm font-medium text-gray-700 mb-1">CNPJ
+                                    (Opcional)</label>
+                                <input id="fornecedor-cnpj" name="cnpj" data-mask="cnpj" class="input"
+                                    placeholder="00.000.000/0000-00" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo Fornecedor</button>
+                        </form>
+                        <hr class="my-4">
+                        <h3 class="font-medium mb-2">Fornecedores Cadastrados:</h3>
+                        <ul id="lista-fornecedores" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+
+                <section id="page-cadastro-centros-custo" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Gerenciar Centros de Custo</h2>
+                        <form id="form-centro-custo" class="space-y-3 mb-4">
+                            <div>
+                                <label for="cc-nome" class="block text-sm font-medium text-gray-700 mb-1">Nome (Ex:
+                                    Fundação) *</label>
+                                <input id="cc-nome" name="nome" class="input" required />
+                            </div>
+                            <div>
+                                <label for="cc-codigo" class="block text-sm font-medium text-gray-700 mb-1">Código
+                                    (Ex:
+                                    01.01) (Opcional)</label>
+                                <input id="cc-codigo" name="codigo" class="input" />
+                            </div>
+                            <button type="submit" class="btn w-full">Salvar Novo C. de Custo</button>
+                        </form>
+                        <hr class="my-4">
+                        <h3 class="font-medium mb-2">Centros de Custo Cadastrados:</h3>
+                        <ul id="lista-centros-custo" class="text-sm overflow-y-auto" style="max-height: 40vh;"></ul>
+                    </div>
+                </section>
+
+                <section id="page-relatorios-fornecedor" class="page space-y-6">
+                    <div class="card">
+                        <h2 class="text-xl font-bold mb-4">Relatório por Fornecedor</h2>
+                        <div class="max-w-md mb-4">
+                            <label class="block text-sm font-medium text-gray-700">Selecione o Fornecedor:</label>
+                            <select id="relatorio-fornecedor-select" class="input mt-1"></select>
+                        </div>
+                    </div>
+                    <div id="relatorio-fornecedor-content" class="hidden space-y-6">
+                        <div class="card text-center">
+                            <div class="text-sm font-medium text-gray-500">Total Gasto com <span id="rel-forn-nome"
+                                    class="font-bold"></span></div>
+                            <div id="rel-forn-total" class="text-3xl font-bold text-red-600"></div>
+                        </div>
+                        <div class="card">
+                            <h3 class="text-lg font-bold mb-4">Histórico de Compras do Fornecedor</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Obra (O.S.)</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Data</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                NF-e</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Valor</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                PDF</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="relatorio-fornecedor-table-body" class="divide-y divide-gray-200">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="page-configuracoes" class="page">
+                    <div class="max-w-5xl mx-auto space-y-6">
+                        <div class="card text-center">
+                            <h2 class="text-2xl font-bold mb-2">Configurações</h2>
+                            <p class="text-sm text-gray-500">Preferências de notificações e gestão de usuários.</p>
+                        </div>
+
+                        <div class="flex flex-col items-center gap-6">
+                            <div class="card w-full max-w-4xl space-y-4">
+                                <h3 class="text-lg font-semibold text-gray-800">Notificações</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <label class="flex items-center gap-2 text-sm"><input id="notif-channel-toast"
+                                            type="checkbox" class="h-4 w-4">Toast no app</label>
+                                    <label class="flex items-center gap-2 text-sm"><input id="notif-channel-email"
+                                            type="checkbox" class="h-4 w-4">E-mail</label>
+                                    <label class="flex items-center gap-2 text-sm"><input id="notif-channel-push"
+                                            type="checkbox" class="h-4 w-4">Push</label>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-2">
+                                        <div class="font-medium text-sm text-gray-600">Eventos</div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                            <label class="flex items-center gap-2"><input id="notif-event-atraso"
+                                                    type="checkbox" class="h-4 w-4">Atraso de entrega</label>
+                                            <label class="flex items-center gap-2"><input id="notif-event-sla"
+                                                    type="checkbox" class="h-4 w-4">SLA de entrega</label>
+                                            <label class="flex items-center gap-2"><input id="notif-event-orcamento"
+                                                    type="checkbox" class="h-4 w-4">Estouro de orçamento</label>
+                                            <label class="flex items-center gap-2"><input id="notif-event-rdo"
+                                                    type="checkbox" class="h-4 w-4">Integração RDO</label>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                        <label class="block">
+                                            <span class="font-medium text-gray-600">Dias para sinalizar
+                                                atraso</span>
+                                            <input id="notif-threshold-atraso" type="number" min="0"
+                                                class="input mt-1 w-full" />
+                                        </label>
+                                        <label class="block">
+                                            <span class="font-medium text-gray-600">% gasto para alerta</span>
+                                            <input id="notif-threshold-percent" type="number" min="0" max="100"
+                                                class="input mt-1 w-full" />
+                                        </label>
+                                        <label class="block md:col-span-2">
+                                            <span class="font-medium text-gray-600">Frequência</span>
+                                            <select id="notif-frequency" class="input mt-1 w-full">
+                                                <option value="imediato">Imediato</option>
+                                                <option value="diario">Diário</option>
+                                                <option value="semanal">Semanal</option>
+                                            </select>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-3 justify-end pt-2">
+                                    <button id="notif-reset-btn" type="button"
+                                        class="btn-secondary btn-small">Resetar</button>
+                                    <button id="notif-test-btn" type="button"
+                                        class="btn-secondary btn-small">Testar</button>
+                                    <button id="notif-save-btn" type="button" class="btn">Salvar
+                                        Preferências</button>
+                                </div>
+                            </div>
+
+                            <div class="card w-full max-w-4xl space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-800">Usuários</h3>
+                                        <p class="text-sm text-gray-500">Disponível para diretores/administradores.
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button id="config-refresh-users" type="button"
+                                            class="btn-secondary btn-small">Atualizar</button>
+                                        <button id="config-add-user" type="button" class="btn btn-small">Novo
+                                            Usuário</button>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left">Nome</th>
+                                                <th class="px-3 py-2 text-left">E-mail</th>
+                                                <th class="px-3 py-2 text-left">Papel</th>
+                                                <th class="px-3 py-2 text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="config-users-body" class="divide-y divide-gray-200">
+                                            <tr>
+                                                <td colspan="4" class="px-3 py-2 text-center text-gray-400">
+                                                    Carregando
+                                                    usuários...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <dialog id="obraEditModal" class="bg-white rounded-lg shadow-xl p-0 w-full max-w-4xl backdrop:bg-gray-900/50">
+        <div class="flex justify-between items-center p-4 border-b">
+            <h3 class="text-lg font-bold">Editar Obra</h3>
+            <button onclick="document.getElementById('obraEditModal').close()"
+                class="text-gray-500 hover:text-gray-700">`n                            ?`n                        </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[80vh]">
+            <form id="form-edit-obra" class="space-y-4">
+                <input type="hidden" name="id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nome da Obra</label>
+                        <input name="nome_obra" class="input mt-1 w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Número O.S.</label>
+                        <input name="numero_os" class="input mt-1 w-full" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Apelido p/ Obra</label>
+                        <input name="apelido" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Cliente</label>
+                        <input name="cliente" class="input mt-1 w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valor Orçado (R$)</label>
+                        <input name="valor_orcado" data-mask="currency" class="input mt-1 w-full" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Descrição</label>
+                    <textarea name="descricao_obra" class="input mt-1 w-full" rows="2"></textarea>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Empresa</label>
+                        <input name="empresa" class="input mt-1 w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Local Realização</label>
+                        <input name="local_realizacao" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tolerância (%)</label>
+                        <input name="tolerancia_percentual" type="number" step="0.1" class="input mt-1 w-full">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data Prev. Início</label>
+                        <input name="data_prevista_inicio" type="date" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Data Prev. Fim</label>
+                        <input name="data_prevista_fim" type="date" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Horas Previstas</label>
+                        <input name="horas_previstas" type="number" step="0.1" class="input mt-1 w-full">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Horas Extras Prev.</label>
+                        <input name="horas_extras_previstas" type="number" step="0.1" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Valor Deslocamento (Km)</label>
+                        <input name="valor_deslocamento_km" data-mask="currency" class="input mt-1 w-full">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Qtde Refeições</label>
+                        <input name="qtd_refeicoes" type="number" class="input mt-1 w-full">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Qtde Hospedagens</label>
+                        <input name="qtd_hospedagens" type="number" class="input mt-1 w-full">
+                    </div>
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <input type="checkbox" name="is_obra_filha" id="edit-obra-filha" class="h-4 w-4">
+                        <label for="edit-obra-filha" class="text-sm text-gray-700">Obra Filha?</label>
+                    </div>
+                    <div id="obra-edit-filha-wrapper" class="hidden">
+                        <label class="block text-sm font-medium text-gray-700">Obra Pai (OS)</label>
+                        <input name="obra_pai_os" class="input mt-1 w-full">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="document.getElementById('obraEditModal').close()"
+                        class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="fornecedorEditModal" class="bg-white rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-gray-900/50">
+        <div class="p-6">
+            <h3 class="text-lg font-bold mb-4">Editar Fornecedor</h3>
+            <form id="form-edit-fornecedor" class="space-y-4">
+                <input type="hidden" name="id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nome</label>
+                    <input name="nome" class="input mt-1 w-full" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">CNPJ</label>
+                    <input name="cnpj" data-mask="cnpj" class="input mt-1 w-full">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('fornecedorEditModal').close()"
+                        class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="compradorEditModal" class="bg-white rounded-lg shadow-xl p-0 w-full max-w-md backdrop:bg-gray-900/50">
+        <div class="p-6">
+            <h3 class="text-lg font-bold mb-4">Editar Comprador</h3>
+            <form id="form-edit-comprador" class="space-y-4">
+                <input type="hidden" name="id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nome</label>
+                    <input name="nome" class="input mt-1 w-full" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input name="email" type="email" class="input mt-1 w-full">
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="document.getElementById('compradorEditModal').close()"
+                        class="btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <script src="./env.js"></script>
+    <script type="module" src="js/app.js"></script>
+
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

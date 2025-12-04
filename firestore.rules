@@ -1,82 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ============================================
-    // MODO DE PRODUÇÃO
-    // ============================================
-
-    // Helper function to check if user is authenticated
-    function isAuthenticated() {
-      return request.auth != null && request.auth.uid != null;
-    }
-
-    // Helper function to get the user's role from the 'usuarios' collection
-    function getUserRole() {
-      let userPath = /databases/$(database)/documents/usuarios/$(request.auth.uid);
-      return exists(userPath) ? get(userPath).data.role : 'guest';
-    }
-
-    // Helper function to check if the user has one of the required roles
-    function roleIn(roles) {
-      return isAuthenticated() &&
-        (getUserRole() == 'administrador' || getUserRole() in roles);
-    }
-
-    // Obras
-    match /obras/{obraId} {
-      allow read: if isAuthenticated();
-      allow create, update: if roleIn(['diretor']);
-      allow delete: if roleIn(['diretor']);
-    }
-
-    // Cadastros auxiliares
-    match /compradores/{id} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if roleIn(['diretor']);
-    }
-
-    match /fornecedores/{id} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if roleIn(['diretor']);
-    }
-
-    match /centrosCusto/{id} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if roleIn(['diretor']);
-    }
-
-    // Compras
-    match /compras/{id} {
-      allow read: if isAuthenticated();
-      allow create, update: if roleIn(['diretor', 'comprador']);
-      allow delete: if roleIn(['diretor']);
-    }
-
-    // Usuários (perfil)
-    match /usuarios/{uid} {
-      // Allow users to read and write their own profile
-      // Allow directors to manage other users
-      allow read: if isAuthenticated();
-      allow create, update: if request.auth.uid == uid || roleIn(['diretor']);
-      allow delete: if roleIn(['diretor']);
-    }
-
-    // Configurações de usuário (notificações, etc.)
-    match /settings/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
-      allow read, write: if roleIn(['diretor']); // diretores podem ajudar outros usuários
-    }
-
-    // Logs de auditoria
-    match /logs/{id} {
-      allow create: if isAuthenticated();
-      allow read, update, delete: if false;
-    }
-
-    // Default: deny all
+    
+    // Regra padrão: usuários autenticados podem ler e escrever
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
+    }
+    
+    // Regras específicas para coleções (opcional - mais seguro)
+    
+    // Usuários: apenas leitura do próprio perfil
+    match /usuarios/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Obras: todos autenticados podem ler, apenas admin/diretor podem criar/editar
+    match /obras/{obraId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && 
+        (get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['admin', 'diretor']);
+      allow delete: if request.auth != null && 
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Compras: todos autenticados podem ler e criar
+    match /compras/{compraId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Notificações: apenas o próprio usuário pode ler suas notificações
+    match /notificacoes/{notifId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
     }
   }
 }

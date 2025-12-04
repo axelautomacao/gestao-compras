@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestão de Compras Axel</title>
+    <meta name="description" content="Sistema de Gestão de Compras e Obras">
+</head>
+
+<body class="bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div id="app" class="h-screen w-screen overflow-hidden flex flex-col">
+        <!-- App Content will be injected here -->
+        <div id="loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-dark-bg">
+            <div class="flex flex-col items-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                <p class="mt-4 text-gray-600 dark:text-gray-400">Carregando sistema...</p>
+            </div>
+        </div>
+    </div>
+    <!-- Carrega configurações de ambiente (Firebase/RDO) antes do bundle -->
+    <script src="/env.js"></script>
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
