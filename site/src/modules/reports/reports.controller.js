@@ -268,6 +268,7 @@ export const ReportsController = {
     showModal: (compra, editable = false) => {
         const modal = document.createElement('div');
         modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
+        const lastUpdate = Utils.formatLastUpdate(compra);
 
         const selectOptions = (items = [], selected, formatter = (i) => i.label) => items.map(item => {
             const val = item.value ?? item.id;
@@ -345,6 +346,10 @@ export const ReportsController = {
                         ${section('Recebimento', editable
             ? `<input id="modal-receb" type="date" class="input" value="${(compra.data_recebimento || '').split('T')[0]}">`
             : `<p class="text-text">${Utils.formatDate(compra.data_recebimento)}</p>`)}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${section('Última modificação', `<p class="text-text">${lastUpdate}</p>`)}
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -10,6 +10,43 @@
         return d.toLocaleDateString('pt-BR');
     },
 
+    formatDateTime: (dateValue) => {
+        if (!dateValue) return '-';
+        const d = dateValue?.toDate ? dateValue.toDate() : new Date(dateValue);
+        if (Number.isNaN(d.getTime())) return '-';
+        const dateStr = d.toLocaleDateString('pt-BR');
+        const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return `${dateStr} às ${timeStr}`;
+    },
+
+    formatLastUpdate: (data = {}) => {
+        const updated =
+            data.ultima_atualizacao ||
+            data.ultimaAtualizacao ||
+            data.last_update ||
+            data.atualizado_em ||
+            data.updated_at ||
+            data.updatedAt ||
+            data.updated ||
+            null;
+        const user =
+            data.atualizado_por ||
+            data.atualizadoPor ||
+            data.updated_by ||
+            data.lastUpdatedBy ||
+            data.modificado_por ||
+            data.last_update_user ||
+            data.criado_por ||
+            '';
+
+        const ts = updated?.toDate ? updated.toDate() : updated ? new Date(updated) : null;
+        if (ts && !Number.isNaN(ts.getTime())) {
+            const stamp = Utils.formatDateTime(ts);
+            return user ? `${user} • ${stamp}` : stamp;
+        }
+        return user || '-';
+    },
+
     // Máscara amigável para inputs de moeda
     formatCurrencyInput: (value, isBlur = false) => {
         const raw = typeof value === 'number' ? value.toFixed(2) : String(value ?? '');

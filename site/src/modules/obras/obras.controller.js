@@ -206,18 +206,7 @@ export const ObrasController = {
                                     </div>
                                     <div class="md:col-span-2">
                                         <label class="text-xs heading-muted uppercase">Última modificação</label>
-                                        <p class="text-text">
-                                            ${(() => {
-                                                const updated = compra.atualizado_em || compra.updated_at || compra.updatedAt || null;
-                                                const user = compra.atualizado_por || compra.updated_by || compra.lastUpdatedBy || '';
-                                                if (!updated) return user || '-';
-                                                const dt = updated?.toDate ? updated.toDate() : new Date(updated);
-                                                if (Number.isNaN(dt?.getTime())) return user || '-';
-                                                const dateStr = Utils.formatDate(dt);
-                                                const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                                                return `${user ? user + ' ' : ''}${dateStr} às ${timeStr}`;
-                                            })()}
-                                        </p>
+                                        <p class="text-text">${Utils.formatLastUpdate(compra)}</p>
                                     </div>
                                 </div>
                                 <div class="flex justify-end gap-2">
@@ -463,6 +452,63 @@ export const ObrasController = {
                                     if (!diarios.length) {
                                         tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center heading-muted">Sem dados</td></tr>';
                                     } else {
+                                        const escapeHtml = (str = '') => String(str)
+                                            .replace(/&/g, '&amp;')
+                                            .replace(/</g, '&lt;')
+                                            .replace(/>/g, '&gt;')
+                                            .replace(/"/g, '&quot;')
+                                            .replace(/'/g, '&#39;');
+
+                                        const parseOcorrencias = (raw) => {
+                                            if (!raw) return [];
+                                            if (Array.isArray(raw)) return raw;
+                                            const text = String(raw).trim();
+                                            if (!text) return [];
+                                            try {
+                                                const parsed = JSON.parse(text);
+                                                if (Array.isArray(parsed)) return parsed;
+                                                if (parsed && typeof parsed === 'object') return [parsed];
+                                            } catch (err) {
+                                                // ignore JSON parse errors; fallback below
+                                            }
+                                            const parts = text.split(/;\s*|\n+/).map(p => p.trim()).filter(Boolean);
+                                            if (parts.length) return parts;
+                                            return [text];
+                                        };
+
+                                        const renderOcorrencias = (raw) => {
+                                            const list = parseOcorrencias(raw);
+                                            if (!list.length) {
+                                                return '<p class="text-sm text-text-muted">Sem detalhes registrados.</p>';
+                                            }
+
+                                            return list.map((item) => {
+                                                if (typeof item === 'string') {
+                                                    return `
+                                                        <div class="rounded border border-border bg-canvas p-3 space-y-1">
+                                                            <p class="text-sm text-text whitespace-pre-wrap">${escapeHtml(item)}</p>
+                                                        </div>
+                                                    `;
+                                                }
+                                                const descricao = item.descricao || item.title || JSON.stringify(item);
+                                                const horario = item.horario
+                                                    ? `${item.horario.inicio || ''}${item.horario.fim ? ` - ${item.horario.fim}` : ''}${item.horario.total ? ` (${item.horario.total})` : item.horario.descricao ? ` (${item.horario.descricao})` : ''}`.trim()
+                                                    : '';
+                                                const tags = Array.isArray(item.tags)
+                                                    ? item.tags.map(t => t.descricao || t.nome || t).filter(Boolean).join(', ')
+                                                    : (typeof item.tags === 'string' ? item.tags : '');
+                                                const tarefa = item.tarefa?.descricao || item.tarefa?.nome || '';
+                                                const extraInfo = [horario && `Horário: ${horario}`, tags && `Tags: ${tags}`, tarefa && `Tarefa: ${tarefa}`].filter(Boolean);
+
+                                                return `
+                                                    <div class="rounded border border-border bg-canvas p-3 space-y-1">
+                                                        <p class="text-sm font-display text-text">${escapeHtml(descricao)}</p>
+                                                        ${extraInfo.length ? `<p class="text-xs text-text-muted">${escapeHtml(extraInfo.join(' • '))}</p>` : ''}
+                                                    </div>
+                                                `;
+                                            }).join('');
+                                        };
+
                                         tbody.innerHTML = diarios.map(item => {
                                             const rawOcorr = item.ocorrenciaTexto;
                                             const ocorrStr = typeof rawOcorr === 'string'
@@ -470,34 +516,35 @@ export const ObrasController = {
                                                 : rawOcorr
                                                     ? JSON.stringify(rawOcorr, null, 2)
                                                     : '';
-                                            const ocorrTxt = ocorrStr.replace(/"/g, '&quot;');
+                                            const ocorrTxt = ocorrStr ? encodeURIComponent(ocorrStr) : '';
                                             return `
                                             <tr>
                                                 <td class="px-2 py-2 text-center text-sm">
                                                     ${item.hasOcorrencia ? `<button class="text-alert underline" data-ocorrencia="${ocorrTxt}" title="Ocorrência registrada">&#9888;</button>` : ''}
                                                 </td>
-                                                <td class="px-4 py-2 text-sm text-text">${new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                                <td class="px-4 py-2 text-sm text-text text-right">${item.horasNormais.toFixed(1)}h</td>
-                                                <td class="px-4 py-2 text-sm text-text text-right">${item.horasExtras.toFixed(1)}h</td>
-                                                <td class="px-4 py-2 text-sm text-text text-right font-display">${item.total.toFixed(1)}h</td>
-                                                <td class="px-4 py-2 text-sm text-text text-right">${item.funcionarios}</td>
+                                                <td class="px-3 py-2 text-sm text-text">${(() => { const d = new Date(item.data); d.setDate(d.getDate() - 1); return d.toLocaleDateString('pt-BR'); })()}</td>
+                                                <td class="px-3 py-2 text-sm text-text text-right">${item.horasNormais.toFixed(1)}h</td>
+                                                <td class="px-3 py-2 text-sm text-text text-right">${item.horasExtras.toFixed(1)}h</td>
+                                                <td class="px-3 py-2 text-sm text-text text-right font-display">${item.total.toFixed(1)}h</td>
+                                                <td class="px-3 py-2 text-sm text-text text-right">${item.funcionarios}</td>
                                             </tr>
                                             `;
                                         }).join('');
 
                                         tbody.querySelectorAll('[data-ocorrencia]').forEach(btn => {
                                             btn.addEventListener('click', () => {
-                                                const texto = btn.getAttribute('data-ocorrencia') || 'Sem detalhes';
+                                                const encoded = btn.getAttribute('data-ocorrencia') || '';
+                                                const texto = encoded ? decodeURIComponent(encoded) : 'Sem detalhes';
                                                 const modal = document.createElement('div');
                                                 modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
                                                 modal.innerHTML = `
-                                                    <div class="bg-surface border border-border rounded shadow-heavy w-full max-w-md">
+                                                    <div class="bg-surface border border-border rounded shadow-heavy w-full max-w-lg">
                                                         <div class="flex justify-between items-center px-4 py-3 border-b border-border">
                                                             <h3 class="text-lg font-display text-text">Ocorrência do RDO</h3>
                                                             <button data-close class="text-text-muted hover:text-text">&times;</button>
                                                         </div>
-                                                        <div class="p-4 space-y-3">
-                                                            <p class="text-sm text-text whitespace-pre-wrap">${texto}</p>
+                                                        <div class="p-4 space-y-3" style="max-height:70vh; overflow-y:auto;">
+                                                            ${renderOcorrencias(texto)}
                                                             <div class="flex justify-end">
                                                                 <button class="btn-secondary" data-close>Fechar</button>
                                                             </div>

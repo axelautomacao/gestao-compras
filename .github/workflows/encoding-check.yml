@@ -1,0 +1,27 @@
+name: Encoding Check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  encoding:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - name: Fail on replacement characters (�)
+        run: |
+          if rg -n "�" site/src; then
+            echo "::error ::Found replacement characters (�) in source. Convert files to UTF-8 and fix the text."
+            exit 1
+          fi
+
+      - name: Reminder for manual suspicious '?' scan
+        run: |
+          echo "Manual check (optional): rg '\"[^\"]*\\?[^\\\"]*\"' site/src"
+          echo "Refer to ENCODING_CHECK.md for details."

@@ -49,6 +49,8 @@ const init = async () => {
         Router.on('/compras/:id/editar', ({ id }) => ComprasController.initEdit(id));
         Router.on('/cadastros', CadastrosController.init);
         Router.on('/cadastros/centros-custo', CentrosController.init);
+        Router.on('/cadastros/fornecedores', FornecedoresController.init);
+        Router.on('/cadastros/compradores', CompradoresController.init);
 
         // Obras routes (lista, criar, detalhe/dashboard, editar)
         Router.on('/obras', ObrasController.initList);

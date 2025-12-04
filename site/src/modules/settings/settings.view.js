@@ -9,7 +9,7 @@ export const SettingsView = {
                 <div class="card">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-display text-text">Usuários do Sistema</h3>
-                        ${Components.createButton({ text: 'Novo Usuário', onClick: "alert('Funcionalidade requer Admin SDK ou Cloud Functions')" })}
+                        ${Components.createButton({ id: 'btn-new-user', text: 'Novo Usuário' })}
                     </div>
                     
                     <div class="overflow-x-auto">

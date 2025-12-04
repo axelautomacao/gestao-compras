@@ -438,22 +438,22 @@ export const ObrasView = {
                                 <thead class="bg-canvas">
                                     <tr>
                                         <th class="px-2 py-2 text-center text-xs font-display text-text-muted uppercase">!</th>
-                                        <th class="px-4 py-2 text-left text-xs font-display text-text-muted uppercase">Data</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase">Horas Normais</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase">Horas Extras</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase">Total</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase">Funcionários</th>
+                                        <th class="px-3 py-2 text-left text-xs font-display text-text-muted uppercase">Data</th>
+                                        <th class="px-3 py-2 text-right text-xs font-display text-text-muted uppercase">Horas Normais</th>
+                                        <th class="px-3 py-2 text-right text-xs font-display text-text-muted uppercase">Horas Extras</th>
+                                        <th class="px-3 py-2 text-right text-xs font-display text-text-muted uppercase">Total</th>
+                                        <th class="px-3 py-2 text-right text-xs font-display text-text-muted uppercase">Funcionários</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-border">
                                     ${(stats.rdoData?.diarios || []).map(item => `
                                         <tr>
                                             <td class="px-2 py-2 text-center text-sm">${item.hasOcorrencia ? `<span class="text-alert" title="${item.ocorrenciaTexto || 'Ocorrência registrada'}">${Icons.alert}</span>` : ''}</td>
-                                            <td class="px-4 py-2 text-sm text-text">${new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right">${item.horasNormais.toFixed(1)}h</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right">${item.horasExtras.toFixed(1)}h</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right font-display">${item.total.toFixed(1)}h</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right">${item.funcionarios}</td>
+                                            <td class="px-3 py-2 text-sm text-text">${(() => { const d=new Date(item.data); d.setDate(d.getDate()-1); return d.toLocaleDateString('pt-BR'); })()}</td>
+                                            <td class="px-3 py-2 text-sm text-text text-right">${item.horasNormais.toFixed(1)}h</td>
+                                            <td class="px-3 py-2 text-sm text-text text-right">${item.horasExtras.toFixed(1)}h</td>
+                                            <td class="px-3 py-2 text-sm text-text text-right font-display">${item.total.toFixed(1)}h</td>
+                                            <td class="px-3 py-2 text-sm text-text text-right">${item.funcionarios}</td>
                                         </tr>
                                     `).join('') || '<tr><td colspan="6" class="px-4 py-4 text-center heading-muted">Sem dados</td></tr>'}
                                 </tbody>
