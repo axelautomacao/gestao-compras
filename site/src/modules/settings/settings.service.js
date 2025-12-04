@@ -1,4 +1,7 @@
 ﻿import { auth, db } from '../../config/firebase.js';
+import { getFirebaseConfig } from '../../config/env.js';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, getDocs, doc, updateDoc, setDoc } from "firebase/firestore";
 
 const getFunctionsBaseUrl = () => {
@@ -27,6 +30,37 @@ export const SettingsService = {
     // Here we will just simulate saving the profile to Firestore, assuming Auth is handled separately or via Signup.
     createUserProfile: async (id, data) => {
         await setDoc(doc(db, 'usuarios', id), data);
+    },
+
+    /**
+     * Cria usuário via Auth secundário para não derrubar a sessão atual. Não depende de Cloud Functions/Blaze.
+     */
+    createWithSecondaryAuth: async ({ nome, email, role = 'obra', password, obraPadrao }) => {
+        const config = getFirebaseConfig();
+        const secondaryApp = getApps().find(a => a.name === 'secondary') || initializeApp(config, 'secondary');
+        const secondaryAuth = getAuth(secondaryApp);
+
+        const pwd = password && password.length >= 6
+            ? password
+            : Math.random().toString(36).slice(2, 10); // gera senha se não enviada
+
+        const cred = await createUserWithEmailAndPassword(secondaryAuth, email, pwd);
+        const uid = cred.user.uid;
+
+        const profile = {
+            uid,
+            nome: nome || '',
+            email,
+            role: role || 'obra',
+            obraPadrao: obraPadrao || null,
+            ativo: true,
+            updatedAt: new Date().toISOString()
+        };
+        await setDoc(doc(db, 'usuarios', uid), profile, { merge: true });
+
+        try { await signOut(secondaryAuth); } catch (_) { /* ignore */ }
+
+        return { uid, profile, password: pwd };
     },
 
     provisionUser: async (payload) => {

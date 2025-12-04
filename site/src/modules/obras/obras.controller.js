@@ -156,8 +156,32 @@ export const ObrasController = {
             };
             updateFinancialKpis();
 
+            // Tab switching logic
+            const bindTabSwitching = () => {
+                const tabs = document.querySelectorAll('.obras-tab');
+                const sections = document.querySelectorAll('[data-section-content]');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const targetSection = tab.dataset.section;
+
+                        // Update active tab
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+
+                        // Update visible section
+                        sections.forEach(s => s.classList.remove('active'));
+                        const targetElement = document.querySelector(`[data-section-content="${targetSection}"]`);
+                        if (targetElement) {
+                            targetElement.classList.add('active');
+                        }
+                    });
+                });
+            };
+            bindTabSwitching();
+
             const bindCompraActions = () => {
-                                    const openModal = (compra) => {
+                const openModal = (compra) => {
                     const modal = document.createElement('div');
                     modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
                     modal.innerHTML = `

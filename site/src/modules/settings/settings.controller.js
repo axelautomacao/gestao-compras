@@ -101,7 +101,7 @@ export const SettingsController = {
                     await SettingsService.updateUser(userId, { role });
                     Components.createToast('Usuário atualizado!');
                 } else {
-                    await SettingsService.provisionUser({
+                    const result = await SettingsService.createWithSecondaryAuth({
                         nome,
                         email,
                         role,
@@ -109,6 +109,10 @@ export const SettingsController = {
                         obraPadrao
                     });
                     Components.createToast('Usuário criado com sucesso!');
+                    if (!password) {
+                        Components.createToast(`Senha gerada: ${result.password}`, 'info');
+                        console.log('[Usuário criado] senha gerada automaticamente:', result.password);
+                    }
                 }
                 close();
                 SettingsController.init();

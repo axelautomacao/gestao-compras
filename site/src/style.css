@@ -38,7 +38,12 @@
         -moz-osx-font-smoothing: grayscale;
     }
 
-    h1, h2, h3, h4, h5, h6 {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
         font-family: var(--font-display, 'Rajdhani', 'Inter', system-ui, sans-serif);
         text-transform: uppercase;
         letter-spacing: 0.05em;
@@ -89,16 +94,51 @@
 }
 
 /* Light theme overrides for Tailwind utility classes generated with fixed colors */
-:root.theme-light .bg-canvas { background-color: var(--color-canvas) !important; }
-:root.theme-light .bg-surface { background-color: var(--color-surface) !important; }
-:root.theme-light .border-border { border-color: var(--color-border) !important; }
-:root.theme-light .text-text { color: var(--color-text) !important; }
-:root.theme-light .text-text-muted { color: var(--color-text-muted) !important; }
-:root.theme-light .heading-muted { color: var(--color-text-muted) !important; }
-:root.theme-light .card { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
-:root.theme-light header, :root.theme-light aside { background-color: var(--color-surface) !important; border-color: var(--color-border) !important; }
-:root.theme-light .bg-canvas .card, :root.theme-light main { background-color: var(--color-canvas) !important; }
-:root.theme-light ::-webkit-scrollbar-thumb { background: #d1d5db; border-color: #e5e7eb; }
+:root.theme-light .bg-canvas {
+    background-color: var(--color-canvas) !important;
+}
+
+:root.theme-light .bg-surface {
+    background-color: var(--color-surface) !important;
+}
+
+:root.theme-light .border-border {
+    border-color: var(--color-border) !important;
+}
+
+:root.theme-light .text-text {
+    color: var(--color-text) !important;
+}
+
+:root.theme-light .text-text-muted {
+    color: var(--color-text-muted) !important;
+}
+
+:root.theme-light .heading-muted {
+    color: var(--color-text-muted) !important;
+}
+
+:root.theme-light .card {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+:root.theme-light header,
+:root.theme-light aside {
+    background-color: var(--color-surface) !important;
+    border-color: var(--color-border) !important;
+}
+
+:root.theme-light .bg-canvas .card,
+:root.theme-light main {
+    background-color: var(--color-canvas) !important;
+}
+
+:root.theme-light ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-color: #e5e7eb;
+}
 
 /* Scrollbar Customization */
 ::-webkit-scrollbar {
@@ -118,4 +158,69 @@
 
 ::-webkit-scrollbar-thumb:hover {
     background: #16a34a;
+}
+
+/* Obras Dashboard - Tab Navigation */
+.obras-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.obras-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 150ms;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.obras-tab:hover {
+    color: var(--color-text);
+    border-bottom-color: var(--color-border);
+}
+
+.obras-tab.active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+    background: transparent;
+}
+
+.tab-icon {
+    font-size: 1.25rem;
+}
+
+.tab-content {
+    animation: fadeIn 200ms ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+[data-section-content] {
+    display: none;
+}
+
+[data-section-content].active {
+    display: block;
 }
