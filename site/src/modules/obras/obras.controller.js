@@ -608,6 +608,30 @@ export const ObrasController = {
                         stats.economia = (summary.total.planned || 0) - (summary.total.spent || 0);
                         stats.curvaPercent = summary.total.planned > 0 ? (summary.total.spent / summary.total.planned) * 100 : 0;
                     }
+                    if (summary) {
+                        Object.assign(stats, {
+                            totalPlanned: summary.totalPlanned,
+                            totalSpent: summary.totalSpent,
+                            totalBalance: summary.totalBalance,
+                            totalPercent: summary.totalPercent,
+                            materialsPlanned: summary.materialsPlanned,
+                            materialsSpent: summary.materialsSpent,
+                            materialsBalance: summary.materialsBalance,
+                            materialsPercent: summary.materialsPercent,
+                            laborPlanned: summary.laborPlanned,
+                            laborSpent: summary.laborSpent,
+                            laborBalance: summary.laborBalance,
+                            laborPercent: summary.laborPercent,
+                            horasNormaisPrevistas: summary.horasNormaisPrevistas,
+                            horasExtrasPrevistas: summary.horasExtrasPrevistas,
+                            horasNormaisExecutadas: summary.horasNormaisExecutadas,
+                            horasExtrasExecutadas: summary.horasExtrasExecutadas,
+                            horasPrevistasEq: summary.horasPrevistasEq,
+                            horasExecutadasEq: summary.horasExecutadasEq,
+                            saldoHorasEq: summary.saldoHorasEq,
+                            percentExtrasNormais: summary.percentExtrasNormais
+                        });
+                    }
                 } catch (err) {
                     console.warn('Erro ao calcular resumo financeiro', err);
                 }
@@ -673,7 +697,6 @@ export const ObrasController = {
         });
     }
 };
-
 
 
 

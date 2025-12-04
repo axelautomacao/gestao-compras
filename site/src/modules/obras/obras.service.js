@@ -59,6 +59,7 @@ export const ObrasService = {
         let leadCount = 0;
         const naturezaTotais = {};
         const ccTotais = {};
+        let aguardandoEntrega = 0;
 
         const mapNatureza = (natRaw = '') => {
             const nat = (natRaw || '').toLowerCase();
@@ -89,6 +90,9 @@ export const ObrasService = {
             const prev = c.previsao_entrega ? new Date(c.previsao_entrega) : null;
             const recv = c.data_recebimento ? new Date(c.data_recebimento) : null;
             if (c.status_compra !== 'Entregue' && prev && prev < new Date()) atrasos++;
+            if (!recv) {
+                aguardandoEntrega++;
+            }
             if (recv && prev) {
                 deliveries++;
                 if (recv <= prev) onTime++;
@@ -154,6 +158,7 @@ export const ObrasService = {
             comprasRecentes: comprasOrdenadas.slice(0, 10),
             comprasCalendar: comprasOrdenadas,
             atrasos,
+            aguardandoEntrega,
             sla,
             lead,
             naturezaTotais,
@@ -268,7 +273,36 @@ export const ObrasService = {
         const totalBalance = totalPlanned - totalSpent;
         const totalPercent = totalPlanned > 0 ? (totalSpent / totalPlanned) * 100 : 0;
 
+        // Horas equivalentes e indicadores adicionais
+        const horasPrevistasEq = horasNormaisPrev + (horasExtrasPrev * extraFactor);
+        const horasExecutadasEq = horasNormaisExec + (horasExtrasExec * extraFactor);
+        const saldoHorasEq = horasPrevistasEq - horasExecutadasEq;
+        const percentExtrasNormais = horasNormaisExec > 0 ? (horasExtrasExec / horasNormaisExec) * 100 : 0;
+
         return {
+            // Flatten (para uso direto em views/kpis)
+            materialsPlanned,
+            materialsSpent,
+            materialsBalance,
+            materialsPercent,
+            laborPlanned,
+            laborSpent,
+            laborBalance,
+            laborPercent,
+            horasNormaisPrevistas: horasNormaisPrev,
+            horasExtrasPrevistas: horasExtrasPrev,
+            horasNormaisExecutadas: horasNormaisExec,
+            horasExtrasExecutadas: horasExtrasExec,
+            totalPlanned,
+            totalSpent,
+            totalBalance,
+            totalPercent,
+            economia: totalBalance,
+            horasPrevistasEq,
+            horasExecutadasEq,
+            saldoHorasEq,
+            percentExtrasNormais,
+            // Estrutura original para compatibilidade
             materials: { planned: materialsPlanned, spent: materialsSpent, balance: materialsBalance, percent: materialsPercent },
             labor: { planned: laborPlanned, spent: laborSpent, balance: laborBalance, percent: laborPercent, horasNormaisExec, horasExtrasExec },
             total: { planned: totalPlanned, spent: totalSpent, balance: totalBalance, percent: totalPercent }
