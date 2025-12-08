@@ -31,9 +31,10 @@
         `;
     },
 
-    createCard: ({ title, content, footer = '', className = '' }) => {
+    createCard: ({ title, content, footer = '', className = '', tooltip = '' }) => {
+        const tooltipAttr = tooltip || title || '';
         return `
-            <div class="card ${className}">
+            <div class="card ${className}" ${tooltipAttr ? `title="${tooltipAttr}"` : ''}>
                 ${title ? `<h3 class="text-lg font-display text-text mb-4">${title}</h3>` : ''}
                 <div class="text-text">
                     ${content}
@@ -65,8 +66,38 @@
 
     createLoader: () => {
         return `
-            <div class="flex justify-center items-center p-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div class="fixed inset-0 flex items-center justify-center bg-canvas/80 backdrop-blur-sm z-50">
+                <div class="flex flex-col items-center justify-center p-6 space-y-4 bg-surface/80 rounded shadow-heavy border border-border">
+                    <img src="/images/logo_axel__principal.png" alt="" class="h-12 w-auto object-contain" />
+                    <div class="w-48 h-2 bg-border rounded overflow-hidden">
+                        <div class="h-full bg-primary animate-pulse" style="width: 65%"></div>
+                    </div>
+                    <p class="text-xs text-text-muted uppercase tracking-wide">Carregando...</p>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Loading spinner simples para seções
+     */
+    createLoadingSpinner: (message = 'Carregando...') => {
+        return `
+            <div class="flex flex-col items-center justify-center py-10 text-center">
+                <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <p class="mt-3 text-sm text-text-muted">${message}</p>
+            </div>
+        `;
+    },
+
+    /**
+     * Empty state genérico
+     */
+    createEmptyState: (message = 'Sem dados disponíveis', icon = 'ℹ️') => {
+        return `
+            <div class="flex flex-col items-center justify-center py-10 text-center text-text-muted">
+                <div class="text-5xl mb-2">${icon}</div>
+                <p class="text-sm">${message}</p>
             </div>
         `;
     }

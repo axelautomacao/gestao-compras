@@ -1,3 +1,4 @@
+
 # Relatório Comparativo: Versão Nova (/site) vs Versão Antiga (/dist)
 
 **Data do Relatório:** 02/12/2025  

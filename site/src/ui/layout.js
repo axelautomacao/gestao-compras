@@ -1,13 +1,13 @@
-import { Store } from '../core/store.js';
+﻿import { Store } from '../core/store.js';
 import { Router } from '../core/router.js';
 import { Icons } from './icons.js';
 import { Auth } from '../modules/auth/auth.service.js';
 
 const navSections = [
     {
-        label: 'ANÁLISE',
+        label: 'ANÃLISE',
         items: [
-            { route: '/', label: 'Visão Geral', icon: Icons.dashboard },
+            { route: '/', label: 'VisÃ£o Geral', icon: Icons.dashboard },
             { route: '/obras', label: 'Por Obra', icon: Icons.chart },
         ],
     },
@@ -29,7 +29,7 @@ const navSections = [
     {
         label: 'SISTEMA',
         items: [
-            { route: '/configuracoes', label: 'Configurações', icon: Icons.settings },
+            { route: '/configuracoes', label: 'ConfiguraÃ§Ãµes', icon: Icons.settings },
         ],
     },
 ];
@@ -53,7 +53,7 @@ export const Layout = {
                 <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 bg-surface border-r border-border flex flex-col transition-all duration-300 md:static md:h-screen shadow-heavy hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'}">
                     <div class="h-16 flex items-center justify-center border-b border-border shrink-0">
                         <span class="text-2xl font-display text-primary">AXEL</span>
-                        <span id="sidebar-logo-text" class="${sidebarCollapsed ? 'hidden' : 'ml-2 text-text font-display tracking-wide'}">GESTÃO</span>
+                        <span id="sidebar-logo-text" class="${sidebarCollapsed ? 'hidden' : 'ml-2 text-text font-display tracking-wide'}">GESTÃƒO</span>
                     </div>
 
                     <nav class="flex-1 overflow-y-auto py-4 space-y-3 px-3">
@@ -105,7 +105,7 @@ export const Layout = {
                             <div class="flex items-center gap-3 pl-4 border-l border-border">
                                 <div class="text-right hidden sm:block">
                                     <p class="text-sm font-display text-text">${user.nome || user.email}</p>
-                                    <p class="text-xs text-text-muted capitalize">${user.role || 'Usuário'}</p>
+                                    <p class="text-xs text-text-muted capitalize">${user.role || 'UsuÃ¡rio'}</p>
                                 </div>
                                 <div class="h-8 w-8 rounded bg-primary flex items-center justify-center text-canvas font-bold shadow-heavy">
                                     ${(user.nome || user.email || 'U').charAt(0).toUpperCase()}

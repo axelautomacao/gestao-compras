@@ -14,6 +14,16 @@
     --color-text: #e5e5e5;
     --color-text-muted: #a1a1aa;
     --color-alert: #ef4444;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-info: #3b82f6;
+    --color-neutral: #6b7280;
+    /* Chart palette */
+    --chart-primary: #3b82f6;
+    --chart-secondary: #10b981;
+    --chart-tertiary: #f59e0b;
+    --chart-quaternary: #ef4444;
+    --chart-quinary: #6366f1;
     --font-sans: 'Inter', system-ui, sans-serif;
     --font-display: 'Rajdhani', 'Inter', system-ui, sans-serif;
     color-scheme: dark;
@@ -26,6 +36,15 @@
     --color-border: #e5e7eb;
     --color-text: #0b0b0b;
     --color-text-muted: #374151;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-info: #2563eb;
+    --color-neutral: #6b7280;
+    --chart-primary: #2563eb;
+    --chart-secondary: #16a34a;
+    --chart-tertiary: #f59e0b;
+    --chart-quaternary: #dc2626;
+    --chart-quinary: #4f46e5;
     color-scheme: light;
 }
 

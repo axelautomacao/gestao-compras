@@ -9,6 +9,8 @@ import { RDOCharts } from '../obras/rdo.charts.js';
 import { generatePlannedValue, generateActualValue } from '../../utils/sCurve.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { ReportsService } from '../reports/reports.service.js';
+import { ReportsCharts } from '../reports/reports.charts.js';
+import { ParetoCharts } from '../reports/pareto.charts.js';
 import { Icons } from '../../ui/icons.js';
 import { AlertsService } from '../notifications/alerts.service.js';
 import { NotificationManager } from '../notifications/notification.manager.js';
@@ -83,15 +85,9 @@ export const DashboardController = {
                         } else {
                             RDOCharts.renderEmpty('chart-rdo-funcao');
                         }
-                        if (stats.rdoData.funcionariosPorDia) {
-                            RDOCharts.renderFuncionariosPorDia('chart-rdo-funcionarios', stats.rdoData.funcionariosPorDia);
-                        } else {
-                            RDOCharts.renderEmpty('chart-rdo-funcionarios');
-                        }
                     } else {
                         RDOCharts.renderEmpty('chart-rdo-horas');
                         RDOCharts.renderEmpty('chart-rdo-funcao');
-                        RDOCharts.renderEmpty('chart-rdo-funcionarios');
                     }
                 }, 100);
             } else {
@@ -112,7 +108,18 @@ export const DashboardController = {
                         return elegivel && aprovado ? sum + Number(c.valor_total || c.valor_estimado || 0) : sum;
                     }, 0);
                     const percent = limite > 0 ? (comprometido / limite) * 100 : 0;
-                    return { id: o.id, nome: o.nome_obra || o.apelido_obra || o.id, limite, comprometido, percent };
+                    const saldo = limite - comprometido;
+                    return {
+                        id: o.id,
+                        nome: o.nome_obra || o.apelido_obra || o.id,
+                        os: o.numero_os || o.numeroOS || o.numeroObra || '',
+                        limite,
+                        comprometido,
+                        percent,
+                        saldo,
+                        inicio: o.data_inicio || o.data_prevista_inicio || '',
+                        fim: o.data_prevista_fim || o.data_fim || ''
+                    };
                 }).filter(item => item.limite > 0 || item.comprometido > 0).sort((a, b) => b.percent - a.percent).slice(0, 8);
 
                 // Curva S agregada PV/AV com datas reais
@@ -154,6 +161,8 @@ export const DashboardController = {
                     if (stats.naturezaTotais) DashboardCharts.renderNatureza('chart-natureza-dir', stats.naturezaTotais);
                     if (stats.ccTotais) DashboardCharts.renderCentrosCusto('chart-cc-dir', stats.ccTotais);
                     if (stats.gastosPorMes) DashboardCharts.renderGastosPorMes('chart-gastos-mes', stats.gastosPorMes);
+                    ReportsCharts.renderFunnelChart('chart-funnel', stats.porStatus || {});
+                    if (stats.paretoAnalysis) ParetoCharts.renderParetoChart('chart-pareto', stats.paretoAnalysis);
                 }, 100);
                 if (stats.atrasos > 0) {
                     Components.createToast(`Há ${stats.atrasos} compras com previsão vencida.`, 'warning');

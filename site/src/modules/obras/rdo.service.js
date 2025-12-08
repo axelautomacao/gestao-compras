@@ -1,4 +1,5 @@
 ﻿import { getRdoConfig } from '../../config/env.js';
+import { COST_PER_HOUR, COST_PER_OVERTIME_HOUR, EXTRA_FACTOR } from '../../constants/costs.js';
 
 // Integra RDO legado (compatível com dist/js/services/diarioDeObraApi.js)
 // Usa token em env/localStorage e endpoint configurável.
@@ -201,7 +202,6 @@ export const RDOService = {
             if (!d) return null;
             if (Number.isNaN(d.getTime())) return null;
             d.setHours(12, 0, 0, 0);
-            d.setDate(d.getDate() + 1); // ajuste solicitado: deslocar +1 dia
             return d;
         };
 
@@ -306,6 +306,175 @@ const padrao = rep?.maoDeObra?.padrao || [];
             techHours,
             techExtraHours,
             diarios,
+        };
+    },
+
+    /**
+     * Métricas consolidadas de mão de obra (Sprint 2) usando dados crus do RDO ou dados já processados.
+     */
+    calculateLaborMetrics: (obra = {}, rdoData = {}) => {
+        const PADRAO_DIA = 9;
+        const extraEq = Number(EXTRA_FACTOR || 1.5);
+        const costHour = Number(COST_PER_HOUR || 0);
+        const costOver = Number(COST_PER_OVERTIME_HOUR || costHour);
+
+        const horasNormaisPrevistas = Number(obra?.horas_previstas) || 0;
+        const horasExtrasPrevistas = Number(obra?.horas_extras_previstas) || 0;
+        const horasPrevistasEq = horasNormaisPrevistas + (horasExtrasPrevistas * extraEq);
+
+        const reportsRaw = Array.isArray(rdoData?.reports)
+            ? rdoData.reports
+            : Array.isArray(rdoData?.relatoriosRaw)
+                ? rdoData.relatoriosRaw
+                : Array.isArray(rdoData)
+                    ? rdoData
+                    : null;
+
+        let horasNormaisExec = 0;
+        let horasExtrasExec = 0;
+        const dailyMap = new Map();
+        const techMap = new Map();
+        const funcaoMap = new Map();
+        const techNames = new Set();
+        let sumFuncionariosDia = 0;
+
+        const pushDaily = (dateKey, normal, extra, funcionariosCount = 0) => {
+            const existing = dailyMap.get(dateKey) || { normal: 0, extra: 0, funcionarios: 0 };
+            existing.normal += normal;
+            existing.extra += extra;
+            existing.funcionarios += funcionariosCount;
+            dailyMap.set(dateKey, existing);
+        };
+
+        if (reportsRaw) {
+            const parseHoras = (val) => {
+                if (typeof val === 'number') return val;
+                if (typeof val === 'string') {
+                    if (val.includes(':')) {
+                        const [h, m] = val.split(':').map(Number);
+                        return (h || 0) + (m || 0) / 60;
+                    }
+                    const num = Number(val.toString().replace(',', '.'));
+                    return Number.isNaN(num) ? 0 : num;
+                }
+                return 0;
+            };
+
+            reportsRaw.forEach(rep => {
+                let normalRep = 0;
+                let extraRep = 0;
+                let funcCount = 0;
+
+                const dateStr = rep.data || rep.createdAt || rep.data_inicio;
+                const dateKey = dateStr ? new Date(dateStr).toISOString().split('T')[0] : null;
+
+                (rep?.maoDeObra?.padrao || []).forEach(p => {
+                    const horas = Number(p.quantidade) || 0;
+                    const extra = Math.max(0, horas - PADRAO_DIA);
+                    const normal = horas - extra;
+                    normalRep += normal;
+                    extraRep += extra;
+                    funcCount++;
+
+                    const nome = p.nome || p.funcionario || p.descricao || 'Tecnico';
+                    techMap.set(nome, (techMap.get(nome) || 0) + horas);
+                    techNames.add(nome);
+
+                    const funcao = p.funcao || p.cargo || 'Geral';
+                    funcaoMap.set(funcao, (funcaoMap.get(funcao) || 0) + horas);
+                });
+
+                (rep?.maoDeObra?.personalizada || []).forEach(mo => {
+                    const horas = parseHoras(mo.horasTrabalhadas);
+                    const extra = Math.max(0, horas - PADRAO_DIA);
+                    const normal = horas - extra;
+                    normalRep += normal;
+                    extraRep += extra;
+                    funcCount++;
+
+                    const nome = mo.nome || mo.funcionario || mo.descricao || 'Tecnico';
+                    techMap.set(nome, (techMap.get(nome) || 0) + horas);
+                    techNames.add(nome);
+
+                    const funcao = mo.funcao || mo.cargo || 'Geral';
+                    funcaoMap.set(funcao, (funcaoMap.get(funcao) || 0) + horas);
+                });
+
+                horasNormaisExec += normalRep;
+                horasExtrasExec += extraRep;
+                if (dateKey) {
+                    pushDaily(dateKey, normalRep, extraRep, funcCount);
+                    sumFuncionariosDia += funcCount;
+                }
+            });
+        } else {
+            const normaisPorDia = rdoData.horasNormaisPorDia || {};
+            const extrasPorDia = rdoData.horasExtrasPorDia || {};
+            const funcPorDia = rdoData.funcionariosPorDia || {};
+
+            horasNormaisExec = Object.values(normaisPorDia).reduce((a, b) => a + b, 0);
+            horasExtrasExec = Object.values(extrasPorDia).reduce((a, b) => a + b, 0);
+
+            Object.keys({ ...normaisPorDia, ...extrasPorDia }).forEach(key => {
+                const normal = normaisPorDia[key] || 0;
+                const extra = extrasPorDia[key] || 0;
+                const funcCount = funcPorDia[key] || 0;
+                pushDaily(key, normal, extra, funcCount);
+                sumFuncionariosDia += funcCount;
+            });
+
+            const funcaoEntries = rdoData.horasPorFuncao || {};
+            Object.entries(funcaoEntries).forEach(([funcao, horas]) => funcaoMap.set(funcao, horas));
+
+            const techEntries = rdoData.techHours || {};
+            Object.entries(techEntries).forEach(([nome, horas]) => {
+                techMap.set(nome, horas);
+                techNames.add(nome);
+            });
+
+            if (!horasNormaisExec && !horasExtrasExec) {
+                const totalExtras = Number(rdoData.totalExtras || 0);
+                const totalHoras = Number(rdoData.totalHoras || 0);
+                horasExtrasExec = totalExtras;
+                horasNormaisExec = Math.max(0, totalHoras - totalExtras);
+            }
+        }
+
+        const totalHorasBrutas = horasNormaisExec + horasExtrasExec;
+        // Equivalentes: extras * 1.5
+        const horasExecutadasEq = (horasNormaisExec) + (horasExtrasExec * extraEq);
+        const saldoHorasEq = horasPrevistasEq - horasExecutadasEq;
+        const percentExtrasNormais = horasNormaisExec > 0 ? (horasExtrasExec / horasNormaisExec) * 100 : 0;
+        const percentExecutado = horasPrevistasEq > 0 ? (horasExecutadasEq / horasPrevistasEq) * 100 : 0;
+
+        const diasTrabalhados = dailyMap.size;
+        const mediaHorasDia = diasTrabalhados > 0 ? horasExecutadasEq / diasTrabalhados : 0;
+        const totalFuncionarios = techNames.size || rdoData.totalFuncionarios || 0;
+        const mediaFuncionariosDia = diasTrabalhados > 0 ? (sumFuncionariosDia / diasTrabalhados) : 0;
+
+        // Custo: usar horas equivalentes * custo/hora padrão
+        const custoEstimado = horasExecutadasEq * costHour;
+
+        return {
+            horasNormaisPrevistas,
+            horasExtrasPrevistas,
+            horasPrevistasEq,
+            horasNormaisExecutadas: horasNormaisExec,
+            horasExtrasExecutadas: horasExtrasExec,
+            horasExecutadasEq,
+            saldoHorasEq,
+            custoEstimado,
+            percentExtrasNormais,
+            percentExecutado,
+            mediaHorasDia,
+            totalFuncionarios,
+            mediaFuncionariosDia,
+            dailyMap,
+            funcaoMap,
+            techMap,
+            diasTrabalhados,
+            totalHoras: horasExecutadasEq,
+            totalExtras: horasExtrasExec
         };
     },
 

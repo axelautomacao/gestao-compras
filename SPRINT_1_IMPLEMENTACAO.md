@@ -1,3 +1,4 @@
+
 # Guia de Implementação - Sprint 1: Fundação Financeira
 
 ## ⚠️ IMPORTANTE: Problemas de Codificação Detectados

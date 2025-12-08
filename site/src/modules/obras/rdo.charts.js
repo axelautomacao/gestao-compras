@@ -1,5 +1,6 @@
 ﻿import Chart from 'chart.js/auto';
 import 'chartjs-adapter-date-fns';
+import { EXTRA_FACTOR } from '../../constants/costs.js';
 
 const LABEL_FONT = {
     family: 'Rajdhani, Inter, system-ui, sans-serif',
@@ -56,6 +57,7 @@ export const RDOCharts = {
             data: {
                 labels: labels.map(l => {
                     const d = new Date(l);
+                    d.setDate(d.getDate() + 1); // atrasar 1 dia na visualização
                     d.setHours(12, 0, 0, 0);
                     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
                 }),
@@ -301,5 +303,115 @@ export const RDOCharts = {
                 }
             }
         });
+    },
+
+    renderHoursComparisonChart: (canvasId, metrics) => {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx || !metrics) return null;
+        if (ctx.chart) ctx.chart.destroy();
+
+        ctx.chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Previstas (Eq.)', 'Realizadas (Eq.)'],
+                datasets: [{
+                    label: 'Horas Equivalentes',
+                    data: [
+                        metrics.horasPrevistasEq || 0,
+                        metrics.horasExecutadasEq || 0
+                    ],
+                    backgroundColor: ['#a5b4fc', '#34d399'],
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'Horas Previstas vs Realizadas (Equivalentes)' },
+                    tooltip: { callbacks: { label: (ctxTooltip) => `${ctxTooltip.parsed.y.toFixed(1)}h` } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { callback: (value) => `${value.toFixed ? value.toFixed(0) : value}h` } }
+                }
+            }
+        });
+        return ctx.chart;
+    },
+
+    renderHoursCurveChart: (canvasId, obra, metrics) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !obra || !metrics) return null;
+
+        const startDate = obra?.data_prevista_inicio || obra?.data_inicio;
+        const endDate = obra?.data_prevista_fim || obra?.data_fim;
+
+        if (!startDate || !endDate) {
+            const parent = canvas.parentElement;
+            if (parent) parent.innerHTML = '<p class="text-center text-text-muted py-6 text-sm">Defina datas de início e fim da obra</p>';
+            return null;
+        }
+
+        const ctx = canvas.getContext('2d');
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const days = [];
+        const cur = new Date(start);
+        while (cur <= end) {
+            days.push(new Date(cur));
+            cur.setDate(cur.getDate() + 1);
+        }
+
+        const workdays = days.filter(d => {
+            const day = d.getDay();
+            return day !== 0 && day !== 6;
+        });
+        const horasPorDia = workdays.length > 0 ? (metrics.horasPrevistasEq || 0) / workdays.length : 0;
+        let plannedCum = 0;
+        const plannedPoints = [];
+        days.forEach(d => {
+            const isWorkday = d.getDay() !== 0 && d.getDay() !== 6;
+            if (isWorkday) plannedCum += horasPorDia;
+            const dShift = new Date(d);
+            dShift.setDate(dShift.getDate() + 1); // atrasar +1 para alinhar início mostrado
+            plannedPoints.push({ x: dShift.toISOString().split('T')[0], y: plannedCum });
+        });
+
+        let actualCum = 0;
+        const actualPoints = [];
+        days.forEach(d => {
+            const key = d.toISOString().split('T')[0];
+            const daily = metrics.dailyMap?.get(key);
+            if (daily) {
+                actualCum += daily.normal + (daily.extra * EXTRA_FACTOR);
+            }
+            actualPoints.push({ x: key, y: actualCum });
+        });
+
+        if (ctx.chart) ctx.chart.destroy();
+        ctx.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'Horas Planejadas (PV)', data: plannedPoints, borderColor: '#9ca3af', backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                    { label: 'Horas Reais (AV)', data: actualPoints, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.3, fill: true, borderWidth: 2, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: { display: true, text: 'Curva S de Horas (Planejado vs Real)' },
+                    tooltip: { callbacks: { label: (ctxTooltip) => `${ctxTooltip.dataset.label}: ${ctxTooltip.parsed.y.toFixed(1)}h` } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'dd/MM' } } },
+                    y: { beginAtZero: true, ticks: { callback: (v) => `${v.toFixed ? v.toFixed(0) : v}h` } }
+                }
+            }
+        });
+        return ctx.chart;
     }
 };

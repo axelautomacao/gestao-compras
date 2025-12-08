@@ -29,7 +29,7 @@ const getDicaDoDia = (stats) => {
     }
 
     if (dicas.length === 0) {
-        dicas.push('Excelente trabalho! Seus indicadores estão ótimos. Continue assim! 🚀');
+        dicas.push('Excelente trabalho! Seus indicadores estão ótimos. Continue assim! ??');
     }
 
     return dicas[Math.floor(Math.random() * dicas.length)];
@@ -51,7 +51,7 @@ export const DashboardView = {
         return `
             <div class="card overflow-hidden">
                 <h3 class="text-lg font-display text-text mb-4 flex items-center gap-2">
-                    🚚 Próximas Entregas (7 dias)
+                    ?? Próximas Entregas (7 dias)
                 </h3>
                 <div class="relative pt-2 pb-4 overflow-x-auto">
                     <div class="flex items-center min-w-max space-x-8 px-4">
@@ -111,7 +111,7 @@ export const DashboardView = {
                     
                     <!-- Widget de Clima (será preenchido via JS) -->
                     <div id="weather-widget" class="hidden items-center gap-3 bg-canvas px-4 py-3 rounded-lg border border-border shadow-md">
-                        <div class="text-4xl" id="weather-icon">☁️</div>
+                        <div class="text-4xl" id="weather-icon">??</div>
                         <div>
                             <p class="text-2xl font-display text-text" id="weather-temp">--°C</p>
                             <p class="text-xs text-text-muted" id="weather-location">Carregando...</p>
@@ -159,40 +159,40 @@ export const DashboardView = {
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <!-- Aguardando Ação -->
                     ${Components.createCard({
-            title: '⏳ Aguardando Ação',
+            title: '? Aguardando Ação',
             content: `
                             <p class="text-4xl font-display text-alert uppercase">${stats.aguardandoAcao || 0}</p>
                             <p class="text-sm text-text-muted mt-1">Pendentes + Em Cotação</p>
-                            <a href="#/relatorios?status=Pendente,Em Cotação" class="text-xs text-primary hover:underline mt-2 inline-block">Ver todas →</a>
+                            <a href="#/relatorios?status=Pendente,Em Cotação" class="text-xs text-primary hover:underline mt-2 inline-block">Ver todas ?</a>
                         `,
             className: 'hover:shadow-xl transition-shadow cursor-pointer'
         })}
 
                     <!-- Urgentes -->
                     ${Components.createCard({
-            title: '⚠️ Urgentes',
+            title: '?? Urgentes',
             content: `
                             <p class="text-4xl font-display text-${stats.urgentes > 0 ? 'alert' : 'text'} uppercase">${stats.urgentes || 0}</p>
                             <p class="text-sm text-text-muted mt-1">Atrasados + Vence em 3 dias</p>
-                            ${stats.urgentes > 0 ? '<a href="#/relatorios?urgente=true" class="text-xs text-alert hover:underline mt-2 inline-block">Ver urgentes →</a>' : ''}
+                            ${stats.urgentes > 0 ? '<a href="#/relatorios?urgente=true" class="text-xs text-alert hover:underline mt-2 inline-block">Ver urgentes ?</a>' : ''}
                         `,
             className: 'hover:shadow-xl transition-shadow'
         })}
 
                     <!-- Precisam Atualização -->
                     ${Components.createCard({
-            title: '🔄 Precisam Atualização',
+            title: '?? Precisam Atualização',
             content: `
                             <p class="text-4xl font-display text-${stats.precisamAtualizacao > 0 ? 'amber-500' : 'text'} uppercase">${stats.precisamAtualizacao || 0}</p>
                             <p class="text-sm text-text-muted mt-1">Sem update há 3+ dias</p>
-                            ${stats.precisamAtualizacao > 0 ? '<a href="#/relatorios" class="text-xs text-primary hover:underline mt-2 inline-block">Atualizar →</a>' : ''}
+                            ${stats.precisamAtualizacao > 0 ? '<a href="#/relatorios" class="text-xs text-primary hover:underline mt-2 inline-block">Atualizar ?</a>' : ''}
                         `,
             className: 'hover:shadow-xl transition-shadow'
         })}
 
                     <!-- Sem Previsão -->
                     ${Components.createCard({
-            title: '📅 Sem Previsão',
+            title: '?? Sem Previsão',
             content: `
                             <p class="text-4xl font-display text-text uppercase">${stats.semPrevisao || 0}</p>
                             <p class="text-sm text-text-muted mt-1">Comprados sem data</p>
@@ -202,7 +202,7 @@ export const DashboardView = {
 
                     <!-- SLA Entregas -->
                     ${Components.createCard({
-            title: '✅ SLA Entregas',
+            title: '? SLA Entregas',
             content: `
                             <p class="text-4xl font-display text-${(stats.sla || 0) < 80 ? 'alert' : 'primary'} uppercase">${(stats.sla || 0).toFixed(1)}%</p>
                             <p class="text-sm text-text-muted mt-1">Entregas no prazo</p>
@@ -211,17 +211,17 @@ export const DashboardView = {
 
                     <!-- Lead Médio -->
                     ${Components.createCard({
-            title: '⏱️ Lead Médio',
+            title: '?? Lead Médio',
             content: `
                             <p class="text-4xl font-display text-text uppercase">${(stats.lead || 0).toFixed(1)}d</p>
-                            <p class="text-sm text-text-muted mt-1">Emissão → Entrega</p>
+                            <p class="text-sm text-text-muted mt-1">Emissão ? Entrega</p>
                         `
         })}
 
                     <!-- Card de Atividade -->
                     <div class="card lg:col-span-2">
                         <h3 class="text-lg font-display text-text mb-4 flex items-center gap-2">
-                            📈 Sua Atividade
+                            ?? Sua Atividade
                         </h3>
                         
                         <div class="grid grid-cols-2 gap-4 mb-4">
@@ -247,7 +247,7 @@ export const DashboardView = {
                             <div class="flex items-center justify-between text-sm">
                                 <span class="text-text-muted">Variação semanal:</span>
                                 <span class="font-display ${atividade.variacaoSemanal >= 0 ? 'text-primary' : 'text-alert'}">
-                                    ${atividade.variacaoSemanal >= 0 ? '⬆️' : '⬇️'} 
+                                    ${atividade.variacaoSemanal >= 0 ? '??' : '??'} 
                                     ${atividade.variacaoSemanal >= 0 ? '+' : ''}${atividade.variacaoSemanal.toFixed(1)}%
                                 </span>
                             </div>
@@ -262,7 +262,7 @@ export const DashboardView = {
                 <!-- Dica do Dia -->
                 <div class="card bg-gradient-to-r from-primary/10 to-primary/5 border-l-4 border-primary">
                     <div class="flex items-start gap-3">
-                        <span class="text-2xl">💡</span>
+                        <span class="text-2xl">??</span>
                         <div>
                             <h4 class="font-display text-text mb-1">Dica do Dia</h4>
                             <p class="text-sm text-text-muted">${getDicaDoDia(stats)}</p>
@@ -284,12 +284,12 @@ export const DashboardView = {
                 <div class="bg-surface border border-border shadow-heavy rounded overflow-hidden">
                     <div class="px-6 py-4 border-b border-border flex justify-between items-center">
                         <h3 class="text-lg font-display text-text flex items-center gap-2">
-                            🚨 Precisa da Sua Atenção
+                            ?? Precisa da Sua Atenção
                             <span class="text-xs font-normal text-text-muted bg-canvas px-2 py-1 rounded-full border border-border">
                                 Top 10 Críticos
                             </span>
                         </h3>
-                        <a href="#/relatorios" class="text-sm text-primary hover:underline">Ver todas →</a>
+                        <a href="#/relatorios" class="text-sm text-primary hover:underline">Ver todas ?</a>
                     </div>
                     <div class="divide-y divide-border">
                         ${(stats.comprasCriticas || []).map(c => `
@@ -298,7 +298,7 @@ export const DashboardView = {
             }">
                                 <!-- Indicador Visual -->
                                 <div class="flex-shrink-0 text-2xl" title="${c.motivo}">
-                                    ${c.criticidade === 'alta' ? '⚠️' : c.criticidade === 'media' ? '⏳' : 'ℹ️'}
+                                    ${c.criticidade === 'alta' ? '??' : c.criticidade === 'media' ? '?' : '??'}
                                 </div>
 
                                 <!-- Informações Principais -->
@@ -331,13 +331,13 @@ export const DashboardView = {
                                             data-id="${c.id}" 
                                             data-fornecedor="${c.fornecedorNome || ''}"
                                             title="Cobrar Fornecedor">
-                                        📞 Cobrar
+                                        ?? Cobrar
                                     </button>
                                     <button class="btn-sm btn-primary text-xs" 
                                             data-action="receber" 
                                             data-id="${c.id}" 
                                             title="Marcar como Entregue">
-                                        ✅ Receber
+                                        ? Receber
                                     </button>
                                     <button class="btn-sm btn-ghost text-xs" 
                                             data-action="edit" 
@@ -347,7 +347,7 @@ export const DashboardView = {
                                     </button>
                                 </div>
                             </div>
-                        `).join('') || '<div class="p-8 text-center text-text-muted">Nenhuma compra crítica no momento! 🎉</div>'}
+                        `).join('') || '<div class="p-8 text-center text-text-muted">Nenhuma compra crítica no momento! ??</div>'}
                     </div>
                 </div>
             </div>
@@ -385,7 +385,7 @@ export const DashboardView = {
         })}
                     ${Components.createCard({
             title: 'Lead Médio',
-            content: `<p class="text-4xl font-display text-text uppercase">${(stats.lead || 0).toFixed(1)}d</p><p class="text-sm heading-muted mt-1">Emissão → Entrega/Previsão</p>`
+            content: `<p class="text-4xl font-display text-text uppercase">${(stats.lead || 0).toFixed(1)}d</p><p class="text-sm heading-muted mt-1">Emissão ? Entrega/Previsão</p>`
         })}
                     ${Components.createCard({
             title: 'Economia vs Orçamento',
@@ -425,21 +425,15 @@ export const DashboardView = {
                             <canvas id="chart-rdo-funcao"></canvas>
                         </div>
                     </div>
-                    <div class="card h-80">
-                        <h3 class="text-lg font-display text-text mb-4">RDO: Funcionários por Dia</h3>
-                        <div class="h-64 relative">
-                            <canvas id="chart-rdo-funcionarios"></canvas>
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
     },
 
-    renderDiretor: (stats) => {
+        renderDiretor: (stats) => {
         return `
             <div class="space-y-6">
-                <h2 class="text-2xl font-display text-text tracking-wide">Visão Executiva</h2>
+                <h2 class="text-2xl font-display text-text tracking-wide">Visao Executiva</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     ${Components.createCard({
@@ -447,24 +441,20 @@ export const DashboardView = {
             content: `<p class="text-4xl font-display text-primary uppercase">${Utils.formatCurrency(stats.totalGasto)}</p>`
         })}
                     ${Components.createCard({
-            title: 'Total de Pedidos',
-            content: `<p class="text-4xl font-display text-primary uppercase">${stats.totalPedidos}</p>`
-        })}
-                    ${Components.createCard({
             title: '% Curva S (Comprometido vs Limite)',
-            content: `<p class="text-4xl font-display text-${stats.curvaPercent > 100 ? 'alert' : 'primary'} uppercase">${(stats.curvaPercent || 0).toFixed(1)}%</p><p class="text-sm heading-muted mt-1">Limite: ${Utils.formatCurrency(stats.limiteReal || 0)} • Comprometido: ${Utils.formatCurrency(stats.comprometido || 0)}</p>`
+            content: `<p class="text-4xl font-display text-${stats.curvaPercent > 100 ? 'alert' : 'primary'} uppercase">${(stats.curvaPercent || 0).toFixed(1)}%</p><p class="text-sm heading-muted mt-1">Limite: ${Utils.formatCurrency(stats.limiteReal || 0)} | Comprometido: ${Utils.formatCurrency(stats.comprometido || 0)}</p>`
         })}
                     ${Components.createCard({
             title: 'Pedidos em Atraso',
-            content: `<p class="text-4xl font-display text-alert uppercase">${stats.atrasos || 0}</p><p class="text-sm heading-muted mt-1">Com previsão vencida</p>`
+            content: `<p class="text-4xl font-display text-alert uppercase">${stats.atrasos || 0}</p><p class="text-sm heading-muted mt-1">Com previsao vencida</p>`
         })}
                     ${Components.createCard({
             title: 'SLA Entregas',
             content: `<p class="text-4xl font-display text-${(stats.sla || 0) < 80 ? 'alert' : 'primary'} uppercase">${(stats.sla || 0).toFixed(1)}%</p><p class="text-sm heading-muted mt-1">On-time vs entregues</p>`
         })}
                     ${Components.createCard({
-            title: 'Lead Médio',
-            content: `<p class="text-4xl font-display text-text uppercase">${(stats.lead || 0).toFixed(1)}d</p><p class="text-sm heading-muted mt-1">Emissão → Entrega/Previsão</p>`
+            title: 'Lead Medio',
+            content: `<p class="text-4xl font-display text-text uppercase">${(stats.lead || 0).toFixed(1)}d</p><p class="text-sm heading-muted mt-1">Emissao > Entrega/Previsao</p>`
         })}
                     ${Components.createCard({
             title: 'Economia (Limite - Comprometido)',
@@ -475,23 +465,23 @@ export const DashboardView = {
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     ${Components.createCard({
             title: 'Atrasos',
-            content: `<p class="text-3xl font-display text-alert uppercase">${stats.alerts?.atrasados || 0}</p><p class="text-sm heading-muted mt-1">Previsão vencida</p>`
+            content: `<p class="text-3xl font-display text-alert uppercase">${stats.alerts?.atrasados || 0}</p><p class="text-sm heading-muted mt-1">Previsao vencida</p>`
         })}
                     ${Components.createCard({
-            title: 'Sem Previsão',
+            title: 'Sem Previsao',
             content: `<p class="text-3xl font-display text-text uppercase">${stats.alerts?.sem_previsao || 0}</p><p class="text-sm heading-muted mt-1">Pedidos sem data</p>`
         })}
                     ${Components.createCard({
-            title: 'Pend. Aprovação',
-            content: `<p class="text-3xl font-display text-text uppercase">${stats.alerts?.pendente_aprovacao || 0}</p><p class="text-sm heading-muted mt-1">Estouro orç. pendente</p>`
+            title: 'Pend. Aprovacao',
+            content: `<p class="text-3xl font-display text-text uppercase">${stats.alerts?.pendente_aprovacao || 0}</p><p class="text-sm heading-muted mt-1">Estouro orc. pendente</p>`
         })}
                     ${Components.createCard({
-            title: 'Em Cotação',
-            content: `<p class="text-3xl font-display text-text uppercase">${stats.alerts?.cotacao || 0}</p><p class="text-sm heading-muted mt-1">Ped. em cotação</p>`
+            title: 'Em Cotacao',
+            content: `<p class="text-3xl font-display text-text uppercase">${stats.alerts?.cotacao || 0}</p><p class="text-sm heading-muted mt-1">Ped. em cotacao</p>`
         })}
                 </div>
                 
-                <!-- Gráficos -->
+                <!-- Graficos principais -->
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     <div class="card h-80 xl:col-span-2">
                         <h3 class="text-lg font-display text-text mb-4">Curva S (Planejado vs Realizado)</h3>
@@ -506,47 +496,82 @@ export const DashboardView = {
                         </div>
                     </div>
                     <div class="card h-80">
-                        <h3 class="text-lg font-display text-text mb-4">Evolução Mensal</h3>
+                        <h3 class="text-lg font-display text-text mb-4">Evolucao Mensal</h3>
                         <div class="h-64 relative">
                             <canvas id="chart-gastos-mes"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <div class="card h-80">
-                        <h3 class="text-lg font-display text-text mb-4">Top Naturezas</h3>
-                        <div class="h-64 relative">
-                            <canvas id="chart-natureza-dir"></canvas>
+                <div class="space-y-2 mt-6">
+                    <h3 class="text-lg font-display text-text uppercase tracking-wide border-b border-border pb-2">
+                        Indicadores de Qualidade
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="card h-96">
+                            <h3 class="text-lg font-display text-text mb-4">Top Naturezas</h3>
+                            <div class="h-80 relative">
+                                <canvas id="chart-natureza-dir"></canvas>
+                            </div>
+                        </div>
+                        <div class="card h-96 flex flex-col items-center justify-center">
+                            <h3 class="text-lg font-display text-text mb-4">Top Centros de Custo</h3>
+                            <div class="h-80 w-full relative flex items-center justify-center">
+                                <canvas id="chart-cc-dir" style="max-height: 368px; max-width: 368px;"></canvas>
+                            </div>
                         </div>
                     </div>
-                    <div class="card h-80">
-                        <h3 class="text-lg font-display text-text mb-4">Centros de Custo</h3>
-                        <div class="h-64 relative">
-                            <canvas id="chart-cc-dir"></canvas>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                        <div class="card h-[27.5rem]">
+                            <h3 class="text-lg font-display text-text mb-4">Pipeline de Compras</h3>
+                            <div class="h-[23rem] relative">
+                                <canvas id="chart-funnel"></canvas>
+                            </div>
+                        </div>
+                        <div class="card h-[27.5rem]">
+                            <h3 class="text-lg font-display text-text mb-4">Analise de Pareto - Fornecedores</h3>
+                            <div class="h-[23rem] relative">
+                                <canvas id="chart-pareto"></canvas>
+                            </div>
+                            <p class="text-xs text-text-muted mt-2 text-center">
+                                ${(stats.paretoAnalysis?.top20Count || 0)} fornecedores (${(stats.paretoAnalysis?.top20Percent || 0).toFixed(1)}%) representam 80% do valor total
+                            </p>
                         </div>
                     </div>
-                    <div class="card">
-                        <h3 class="text-lg font-display text-text mb-4">Orçamento por Obra (Top)</h3>
+                </div>
+
+                <div class="space-y-2 mt-6">
+                    <h3 class="text-lg font-display text-text uppercase tracking-wide border-b border-border pb-2">Orcamento por Obra (Top)</h3>
+                    <div class="card w-full max-w-[1320px] mx-auto">
                         <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-border">
+                            <table class="min-w-[1375px] divide-y divide-border">
                                 <thead class="bg-canvas">
                                     <tr>
-                                        <th class="px-4 py-2 text-left text-xs font-display text-text-muted uppercase tracking-wide">Obra</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase tracking-wide">Limite</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase tracking-wide">Comprometido</th>
-                                        <th class="px-4 py-2 text-right text-xs font-display text-text-muted uppercase tracking-wide">% Curva</th>
+                                        <th class="px-6 py-3 text-left text-xs font-display text-text-muted uppercase tracking-wide">Obra</th>
+                                        <th class="px-6 py-3 text-left text-xs font-display text-text-muted uppercase tracking-wide">O.S.</th>
+                                        <th class="px-6 py-3 text-left text-xs font-display text-text-muted uppercase tracking-wide">Inicio</th>
+                                        <th class="px-6 py-3 text-left text-xs font-display text-text-muted uppercase tracking-wide">Fim</th>
+                                        <th class="px-6 py-3 text-right text-xs font-display text-text-muted uppercase tracking-wide">Limite</th>
+                                        <th class="px-6 py-3 text-right text-xs font-display text-text-muted uppercase tracking-wide">Comprometido</th>
+                                        <th class="px-6 py-3 text-right text-xs font-display text-text-muted uppercase tracking-wide">% Curva</th>
+                                        <th class="px-6 py-3 text-right text-xs font-display text-text-muted uppercase tracking-wide">Saldo</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-border">
                                     ${(stats.budgetByObra || []).map(item => `
                                         <tr>
-                                            <td class="px-4 py-2 text-sm text-text">${item.nome}</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right">${Utils.formatCurrency(item.limite)}</td>
-                                            <td class="px-4 py-2 text-sm text-text text-right">${Utils.formatCurrency(item.comprometido)}</td>
-                                            <td class="px-4 py-2 text-sm text-${item.percent > 100 ? 'alert' : 'text'} text-right">${item.percent.toFixed(1)}%</td>
+                                            <td class="px-6 py-3 text-sm text-text whitespace-pre-line">${item.nome}</td>
+                                            <td class="px-6 py-3 text-sm text-text">${item.os || '-'}</td>
+                                            <td class="px-6 py-3 text-sm text-text">${Utils.formatDate(item.inicio)}</td>
+                                            <td class="px-6 py-3 text-sm text-text">${Utils.formatDate(item.fim)}</td>
+                                            <td class="px-6 py-3 text-sm text-text text-right">${Utils.formatCurrency(item.limite)}</td>
+                                            <td class="px-6 py-3 text-sm text-text text-right">${Utils.formatCurrency(item.comprometido)}</td>
+                                            <td class="px-6 py-3 text-sm text-${item.percent > 100 ? 'alert' : 'text'} text-right font-display">${item.percent.toFixed(1)}%</td>
+                                            <td class="px-6 py-3 text-sm text-text text-right">${Utils.formatCurrency(item.saldo ?? (item.limite - item.comprometido))}</td>
                                         </tr>
-                                    `).join('') || `<tr><td colspan="4" class="px-4 py-3 text-sm heading-muted text-center">Sem dados</td></tr>`}
+                                    `).join('') || `<tr><td colspan="8" class="px-6 py-4 text-sm heading-muted text-center">Sem dados</td></tr>`}
                                 </tbody>
                             </table>
                         </div>
@@ -556,3 +581,6 @@ export const DashboardView = {
         `;
     }
 };
+
+
+

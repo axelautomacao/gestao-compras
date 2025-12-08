@@ -1,5 +1,6 @@
 ﻿import { db } from '../../config/firebase.js';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { QualityService } from './quality.service.js';
 
 const getResumoOrcamento = async (obraId) => {
     if (!obraId) return null;
@@ -459,6 +460,17 @@ export const DashboardService = {
         const q = query(comprasRef, limit(500));
         const snap = await getDocs(q);
 
+        // Mapas de nomes para centros de custo e fornecedores (evitar exibir IDs)
+        const centrosSnap = await getDocs(collection(db, 'centrosCusto'));
+        const ccMap = new Map(centrosSnap.docs.map(doc => [doc.id, doc.data().nome || doc.data().codigo || doc.id]));
+        const fornecedoresSnap = await getDocs(collection(db, 'fornecedores'));
+        const fornecedorMap = new Map(
+            fornecedoresSnap.docs.map(doc => [
+                doc.id,
+                doc.data().nome_fantasia || doc.data().razao_social || doc.data().nome || doc.id
+            ])
+        );
+
         let totalGasto = 0;
         let porStatus = {};
         let gastosPorMes = {};
@@ -519,7 +531,8 @@ export const DashboardService = {
 
             const nat = (data.natureza_compra || 'Outros').trim();
             naturezaTotais[nat] = (naturezaTotais[nat] || 0) + valor;
-            const cc = data.centroCustoNome || data.centro_custo || data.centroCustoId || 'N/D';
+            const ccNome = ccMap.get(data.centroCustoId) || data.centroCustoNome || data.centro_custo || data.centroCustoId || 'N/D';
+            const cc = ccNome;
             ccTotais[cc] = (ccTotais[cc] || 0) + valor;
 
             if (!data.previsao_entrega && data.status_compra !== 'Recebido' && data.status_compra !== 'Entregue') {
@@ -535,6 +548,17 @@ export const DashboardService = {
         const sla = deliveries ? (onTime / deliveries) * 100 : 0;
         const lead = leadCount ? leadSum / leadCount : 0;
         const economia = Math.max(0, limiteReal - comprometido);
+        const reworkRate = QualityService.calculateReworkRate(allCompras);
+        const complianceIndex = QualityService.calculateComplianceIndex(allCompras);
+        const avgCost = QualityService.calculateAverageCost(allCompras);
+        const supplierDiversity = QualityService.calculateSupplierDiversity(allCompras);
+        const paretoAnalysis = QualityService.calculateParetoAnalysis(allCompras);
+
+        // Normalizar nomes de fornecedores para análises de qualidade/Pareto
+        const comprasComNomeFornecedor = allCompras.map(c => {
+            const nome = fornecedorMap.get(c.fornecedorId) || c.fornecedorNome || c.fornecedor || c.fornecedorId || 'Não informado';
+            return { ...c, fornecedor: nome, fornecedorNome: nome };
+        });
 
         return {
             totalGasto,
@@ -550,9 +574,13 @@ export const DashboardService = {
             economia,
             naturezaTotais,
             ccTotais,
-            alerts
-            ,
-            _allCompras: allCompras
+            alerts,
+            reworkRate: QualityService.calculateReworkRate(comprasComNomeFornecedor),
+            complianceIndex: QualityService.calculateComplianceIndex(comprasComNomeFornecedor),
+            avgCost: QualityService.calculateAverageCost(comprasComNomeFornecedor),
+            supplierDiversity: QualityService.calculateSupplierDiversity(comprasComNomeFornecedor),
+            paretoAnalysis: QualityService.calculateParetoAnalysis(comprasComNomeFornecedor),
+            _allCompras: comprasComNomeFornecedor
         };
     },
 
