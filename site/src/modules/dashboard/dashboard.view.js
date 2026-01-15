@@ -508,6 +508,33 @@ export const DashboardView = {
                         Indicadores de Qualidade
                     </h3>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+                        ${Components.createCard({
+            title: 'Taxa de Retrabalho',
+            content: `<p class="text-4xl font-display text-${(stats.reworkRate?.status === 'bad' ? 'alert' : stats.reworkRate?.status === 'warning' ? 'amber-500' : 'primary')} uppercase">${(stats.reworkRate?.rate || 0).toFixed(1)}%</p>
+                     <p class="text-sm heading-muted mt-1">${stats.reworkRate?.canceladas || 0} canceladas/devolvidas</p>
+                     <p class="text-xs heading-muted mt-1">Meta: < 5%</p>`
+        })}
+                        ${Components.createCard({
+            title: 'Índice de Conformidade',
+            content: `<p class="text-4xl font-display text-${(stats.complianceIndex?.status === 'bad' ? 'alert' : stats.complianceIndex?.status === 'warning' ? 'amber-500' : 'primary')} uppercase">${(stats.complianceIndex?.index || 0).toFixed(1)}%</p>
+                     <p class="text-sm heading-muted mt-1">${stats.complianceIndex?.compliant || 0} com documentação</p>
+                     <p class="text-xs heading-muted mt-1">Meta: > 90%</p>`
+        })}
+                        ${Components.createCard({
+            title: 'Custo Médio por Compra',
+            content: `<p class="text-3xl font-display text-text uppercase">${Utils.formatCurrency(stats.avgCost?.average || 0)}</p>
+                     <p class="text-sm heading-muted mt-1">${stats.avgCost?.count || 0} compras analisadas</p>
+                     <p class="text-xs heading-muted mt-1">Outliers: ${stats.avgCost?.outliers || 0}</p>`
+        })}
+                        ${Components.createCard({
+            title: 'Fornecedores Ativos',
+            content: `<p class="text-3xl font-display text-text uppercase">${stats.supplierDiversity?.fornecedoresAtivos || 0}</p>
+                     <p class="text-sm heading-muted mt-1">Concentração: ${(stats.supplierDiversity?.concentracao || 0).toFixed(1)}%</p>
+                     <p class="text-xs heading-muted mt-1">Top: ${stats.supplierDiversity?.topFornecedor || 'N/A'}</p>`
+        })}
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div class="card h-96">
                             <h3 class="text-lg font-display text-text mb-4">Top Naturezas</h3>
